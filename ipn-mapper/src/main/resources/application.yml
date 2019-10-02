@@ -1,0 +1,12 @@
+spring.rabbitmq.host: ${rabbitmq.server}
+spring.rabbitmq.port: ${rabbitmq.port}
+spring.rabbitmq.username: ${rabbitmq.username}
+spring.rabbitmq.password: ${rabbitmq.password}
+spring.multirabbitmq.serverB.host: ${rabbitmq.serverB.host}
+spring.multirabbitmq.serverB.port: ${rabbitmq.serverB.port}
+spring.multirabbitmq.serverB.username: ${rabbitmq.serverB.username}
+spring.multirabbitmq.serverB.password: ${rabbitmq.serverB.password}
+
+logging:
+  level:
+    net.sparkworks.common: DEBUG
