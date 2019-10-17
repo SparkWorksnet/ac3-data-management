@@ -5,10 +5,10 @@ import lombok.Data;
 
 @Data
 public class SingleValueReading {
-
-  private Long timestamp;
-  
-  @JsonProperty(value = "Data")
-  private Double reading;
-  
+    
+    private Long timestamp;
+    
+    @JsonProperty(value = "Data")
+    private Double reading;
+    
 }

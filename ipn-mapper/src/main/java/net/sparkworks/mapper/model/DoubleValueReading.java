@@ -4,10 +4,10 @@ import lombok.Data;
 
 @Data
 public class DoubleValueReading {
-
-  private Long timestamp;
-  
-  private Double x;
-  
-  private Double y;
+    
+    private Long timestamp;
+    
+    private Double x;
+    
+    private Double y;
 }
