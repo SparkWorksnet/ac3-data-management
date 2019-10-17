@@ -24,7 +24,7 @@ public class RabbitService {
     private static final String MESSAGE_TEMPLATE = "%s,%f,%d";
     private static final String DEBUG_SEND_FORMAT = "Sending to [%s,%s] %s";
 
-    @Value("${spring.rabbitmq.username}")
+    @Value("${rabbitmq.username}")
     private String clientId;
 
     @Value("${rabbitmq.queueSend}")
