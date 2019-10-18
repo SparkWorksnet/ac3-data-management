@@ -83,7 +83,11 @@ public class RabbitService {
         if (!isValidRoutingKey(message.getMessageProperties().getReceivedRoutingKey()) || !isValidBody(message.getBody())) {
             return;
         }
-        sendReadings(message);
+        try {
+            sendReadings(message);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     
     private boolean isValidBody(byte[] body) {
@@ -113,68 +117,52 @@ public class RabbitService {
         return true;
     }
     
-    private void sendReadings(Message message) {
-        String dataType = message.getMessageProperties().getReceivedRoutingKey().split("\\.")[1];
+    private void sendReadings(Message message) throws Exception {
+        String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
+        String dataType = splitRoutingKey[1];
+        String baseUri = splitRoutingKey[0] + "/" + splitRoutingKey[1];
         if (SINGLE_VALUE_READING_DATA_TYPES.contains(dataType)) {
-            sendSingleValueReading(message);
+            sendSingleValueReading(baseUri, message);
         } else if (IMU_DATA_TYPE.contains(dataType)) {
-            sendImuValueReading(message);
+            sendImuValueReading(baseUri, message);
         } else if (DOUBLE_VALUE_READING_DATA_TYPES.contains(dataType)) {
-            sendDoubleValueReading(message);
+            sendDoubleValueReading(baseUri, message);
         } else {
             log.error("No suitable mapper found for routing key \'{}\'.", message.getMessageProperties().getReceivedRoutingKey());
         }
     }
     
-    private void sendSingleValueReading(Message message) {
-        String[] splitedRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
-        String baseUri = splitedRoutingKey[0] + "/" + splitedRoutingKey[1];
-        try {
-            SingleValueReading singleValueReading = mapper.readValue(message.getBody(), SingleValueReading.class);
-            if (hasNullField(singleValueReading)) {
-                return;
-            }
-            sendMeasurement(baseUri, singleValueReading.getReading(), singleValueReading.getTimestamp());
-        } catch (Exception e) {
-            e.printStackTrace();
+    private void sendSingleValueReading(String baseUri, Message message) throws Exception {
+        SingleValueReading singleValueReading = mapper.readValue(message.getBody(), SingleValueReading.class);
+        if (hasNullField(singleValueReading)) {
+            return;
         }
+        sendMeasurement(baseUri, singleValueReading.getReading(), singleValueReading.getTimestamp());
     }
     
-    private void sendImuValueReading(Message message) {
-        String[] splitedRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
-        String baseUri = splitedRoutingKey[0] + "/" + splitedRoutingKey[1];
-        try {
-            ImuValueReading imuValueReading = mapper.readValue(message.getBody(), ImuValueReading.class);
-            if (hasNullField(imuValueReading)) {
-                return;
-            }
-            sendMeasurement(baseUri + "/acelX", imuValueReading.getAcelX(), imuValueReading.getTimestamp());
-            sendMeasurement(baseUri + "/acelY", imuValueReading.getAcelY(), imuValueReading.getTimestamp());
-            sendMeasurement(baseUri + "/acelZ", imuValueReading.getAcelZ(), imuValueReading.getTimestamp());
-            sendMeasurement(baseUri + "/gyroX", imuValueReading.getGyroX(), imuValueReading.getTimestamp());
-            sendMeasurement(baseUri + "/gyroY", imuValueReading.getGyroY(), imuValueReading.getTimestamp());
-            sendMeasurement(baseUri + "/gyroZ", imuValueReading.getGyroZ(), imuValueReading.getTimestamp());
-            sendMeasurement(baseUri + "/cmpX", imuValueReading.getCmpX(), imuValueReading.getTimestamp());
-            sendMeasurement(baseUri + "/cmpY", imuValueReading.getCmpY(), imuValueReading.getTimestamp());
-            sendMeasurement(baseUri + "/cmpZ", imuValueReading.getCmpZ(), imuValueReading.getTimestamp());
-        } catch (Exception e) {
-            e.printStackTrace();
+    private void sendImuValueReading(String baseUri, Message message) throws Exception {
+        ImuValueReading imuValueReading = mapper.readValue(message.getBody(), ImuValueReading.class);
+        if (hasNullField(imuValueReading)) {
+            return;
         }
+        sendMeasurement(baseUri + "/acelX", imuValueReading.getAcelX(), imuValueReading.getTimestamp());
+        sendMeasurement(baseUri + "/acelY", imuValueReading.getAcelY(), imuValueReading.getTimestamp());
+        sendMeasurement(baseUri + "/acelZ", imuValueReading.getAcelZ(), imuValueReading.getTimestamp());
+        sendMeasurement(baseUri + "/gyroX", imuValueReading.getGyroX(), imuValueReading.getTimestamp());
+        sendMeasurement(baseUri + "/gyroY", imuValueReading.getGyroY(), imuValueReading.getTimestamp());
+        sendMeasurement(baseUri + "/gyroZ", imuValueReading.getGyroZ(), imuValueReading.getTimestamp());
+        sendMeasurement(baseUri + "/cmpX", imuValueReading.getCmpX(), imuValueReading.getTimestamp());
+        sendMeasurement(baseUri + "/cmpY", imuValueReading.getCmpY(), imuValueReading.getTimestamp());
+        sendMeasurement(baseUri + "/cmpZ", imuValueReading.getCmpZ(), imuValueReading.getTimestamp());
     }
-
-    private void sendDoubleValueReading(Message message) {
-        String[] splitedRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
-        String baseUri = splitedRoutingKey[0] + "/" + splitedRoutingKey[1];
-        try {
-            DoubleValueReading doubleValueReading = mapper.readValue(message.getBody(), DoubleValueReading.class);
-            if (hasNullField(doubleValueReading)) {
-                return;
-            }
-            sendMeasurement(baseUri + "/x", doubleValueReading.getX(), doubleValueReading.getTimestamp());
-            sendMeasurement(baseUri + "/y", doubleValueReading.getY(), doubleValueReading.getTimestamp());
-        } catch (Exception e) {
-            e.printStackTrace();
+    
+    private void sendDoubleValueReading(String baseUri, Message message) throws Exception {
+        DoubleValueReading doubleValueReading = mapper.readValue(message.getBody(), DoubleValueReading.class);
+        if (hasNullField(doubleValueReading)) {
+            return;
         }
+        sendMeasurement(baseUri + "/x", doubleValueReading.getX(), doubleValueReading.getTimestamp());
+        sendMeasurement(baseUri + "/y", doubleValueReading.getY(), doubleValueReading.getTimestamp());
     }
     
     private boolean hasNullField(Object valueReading) throws IllegalAccessException {
