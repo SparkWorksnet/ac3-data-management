@@ -10,3 +10,7 @@ spring.multirabbitmq.serverB.password: ${rabbitmq.serverB.password}
 logging:
   level:
     net.sparkworks.common: DEBUG
+
+rabbitmq:
+  serverB:
+    queueData: ipn-mouse-data-sparks

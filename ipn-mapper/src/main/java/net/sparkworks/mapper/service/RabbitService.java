@@ -29,6 +29,8 @@ public class RabbitService {
     
     private static final String MESSAGE_TEMPLATE = "%s,%f,%d";
     private static final String DEBUG_SEND_FORMAT = "Sending to [%s,%s] %s";
+    private static final String QUEUE_DATA = "${rabbitmq.serverB.queueData}";
+    private static final String QUEUE_COMMAND = "${rabbitmq.queueCommands}";
     private final ObjectMapper mapper = new ObjectMapper();
 
     private static final Set<String> SINGLE_VALUE_READING_DATA_TYPES = new HashSet<>(Arrays.asList(
@@ -69,13 +71,13 @@ public class RabbitService {
     }
 
     //RabbitMQ listener for commands from SPARKS
-    @RabbitListener(queues = "smartwork-ipn-commands")
+    @RabbitListener(queues = QUEUE_COMMAND)
     public void receiveCommandFromSparks(final Message message) {
         log.info("receiveCommandFromSparks '" + new String(message.getBody()) + "'");
     }
 
     //RabbitMQ listener for data from IPN Mouse
-    @RabbitListener(queues = "ipn-mouse-data-sparks", containerFactory = "serverB")
+    @RabbitListener(queues = QUEUE_DATA, containerFactory = "serverB")
     public void receiveFromSmartWork(final Message message) {
         log.debug("received routing key: {} body: {}", message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
         if (!isValidRoutingKey(message.getMessageProperties().getReceivedRoutingKey())) {
