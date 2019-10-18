@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableCaching
 @EnableScheduling
 @EnableConfigurationProperties
-@SpringBootApplication(scanBasePackages = {"net.sparkworks.mapper"})
+@SpringBootApplication(scanBasePackages = {"net.sparkworks.common.config.secrets", "net.sparkworks.mapper"})
 public class Application {
     
     public static void main(final String[] args) {
