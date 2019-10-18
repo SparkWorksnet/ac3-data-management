@@ -29,7 +29,8 @@ public class RabbitService {
     
     private static final String MESSAGE_TEMPLATE = "%s,%f,%d";
     private static final String DEBUG_SEND_FORMAT = "Sending to [%s,%s] %s";
-    
+    private final ObjectMapper mapper = new ObjectMapper();
+
     private static final Set<String> SINGLE_VALUE_READING_DATA_TYPES = new HashSet<>(Arrays.asList(
             "temperature",
             "skinresponse",
@@ -67,10 +68,8 @@ public class RabbitService {
         rabbitTemplate.send(rabbitQueueSend, rabbitQueueSend, new Message(message.getBytes(), new MessageProperties()));
     }
 
-    private final ObjectMapper mapper = new ObjectMapper();
-
     //RabbitMQ listener for commands from SPARKS
-    @RabbitListener(queues = "smartwork-ipn-mapper-commands")
+    @RabbitListener(queues = "smartwork-ipn-commands")
     public void receiveCommandFromSparks(final Message message) {
         log.info("receiveCommandFromSparks '" + new String(message.getBody()) + "'");
     }
@@ -78,33 +77,36 @@ public class RabbitService {
     //RabbitMQ listener for data from IPN Mouse
     @RabbitListener(queues = "ipn-mouse-data-sparks", containerFactory = "serverB")
     public void receiveFromSmartWork(final Message message) {
-        log.info("receiveFromSmartWork routing key: {}", message.getMessageProperties().getReceivedRoutingKey());
-        log.info("receiveFromSmartWork body: {}", new String(message.getBody()));
-        if (!isValidRoutingKey(message.getMessageProperties().getReceivedRoutingKey()) || !isValidBody(message.getBody())) {
+        log.debug("received routing key: {} body: {}", message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
+        if (!isValidRoutingKey(message.getMessageProperties().getReceivedRoutingKey())) {
+            log.error("invalid routing key: {}", message.getMessageProperties().getReceivedRoutingKey());
+            return;
+        } else if (!isValidBody(message.getBody())) {
+            log.error("invalid body: {}", new String(message.getBody()));
             return;
         }
         try {
             sendReadings(message);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
         }
     }
-    
-    private boolean isValidBody(byte[] body) {
+
+    private boolean isValidBody(final byte[] body) {
         if (body.length == 0) {
             log.error("Empty body.");
             return false;
         }
         try {
-            new ObjectMapper().readTree(body);
+            mapper.readTree(body);
             return true;
         } catch (IOException e) {
             log.error("Invalid JSON: {}", new String(body));
             return false;
         }
     }
-    
-    private boolean isValidRoutingKey(String routingKey) {
+
+    private boolean isValidRoutingKey(final String routingKey) {
         String[] splitRoutingKey = routingKey.split("\\.");
         if (splitRoutingKey.length < 2) {
             log.error("Invalid routing key: \'{}\'.", routingKey);
@@ -116,8 +118,8 @@ public class RabbitService {
         }
         return true;
     }
-    
-    private void sendReadings(Message message) throws Exception {
+
+    private void sendReadings(final Message message) throws IllegalAccessException, IOException {
         String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
         String dataType = splitRoutingKey[1];
         String baseUri = splitRoutingKey[0] + "/" + splitRoutingKey[1];
@@ -131,50 +133,57 @@ public class RabbitService {
             log.error("No suitable mapper found for routing key \'{}\'.", message.getMessageProperties().getReceivedRoutingKey());
         }
     }
-    
-    private void sendSingleValueReading(String baseUri, Message message) throws Exception {
-        SingleValueReading singleValueReading = mapper.readValue(message.getBody(), SingleValueReading.class);
+
+    private void sendSingleValueReading(final String baseUri, final Message message) throws IllegalAccessException, IOException {
+        final long now = System.currentTimeMillis();
+        final SingleValueReading singleValueReading = mapper.readValue(message.getBody(), SingleValueReading.class);
         if (hasNullField(singleValueReading)) {
+            log.error("baseUri: {}, null field {}", baseUri, singleValueReading);
             return;
         }
-        sendMeasurement(baseUri, singleValueReading.getReading(), singleValueReading.getTimestamp());
+        sendMeasurement(baseUri, singleValueReading.getReading(), now);
     }
-    
-    private void sendImuValueReading(String baseUri, Message message) throws Exception {
-        ImuValueReading imuValueReading = mapper.readValue(message.getBody(), ImuValueReading.class);
+
+    private void sendImuValueReading(final String baseUri, final Message message) throws IllegalAccessException, IOException {
+        final long now = System.currentTimeMillis();
+        final ImuValueReading imuValueReading = mapper.readValue(message.getBody(), ImuValueReading.class);
         if (hasNullField(imuValueReading)) {
+            log.error("baseUri: {}, null field {}", baseUri, imuValueReading);
             return;
         }
-        sendMeasurement(baseUri + "/acelX", imuValueReading.getAcelX(), imuValueReading.getTimestamp());
-        sendMeasurement(baseUri + "/acelY", imuValueReading.getAcelY(), imuValueReading.getTimestamp());
-        sendMeasurement(baseUri + "/acelZ", imuValueReading.getAcelZ(), imuValueReading.getTimestamp());
-        sendMeasurement(baseUri + "/gyroX", imuValueReading.getGyroX(), imuValueReading.getTimestamp());
-        sendMeasurement(baseUri + "/gyroY", imuValueReading.getGyroY(), imuValueReading.getTimestamp());
-        sendMeasurement(baseUri + "/gyroZ", imuValueReading.getGyroZ(), imuValueReading.getTimestamp());
-        sendMeasurement(baseUri + "/cmpX", imuValueReading.getCmpX(), imuValueReading.getTimestamp());
-        sendMeasurement(baseUri + "/cmpY", imuValueReading.getCmpY(), imuValueReading.getTimestamp());
-        sendMeasurement(baseUri + "/cmpZ", imuValueReading.getCmpZ(), imuValueReading.getTimestamp());
+        sendMeasurement(baseUri + "/acelX", imuValueReading.getAcelX(), now);
+        sendMeasurement(baseUri + "/acelY", imuValueReading.getAcelY(), now);
+        sendMeasurement(baseUri + "/acelZ", imuValueReading.getAcelZ(), now);
+        sendMeasurement(baseUri + "/gyroX", imuValueReading.getGyroX(), now);
+        sendMeasurement(baseUri + "/gyroY", imuValueReading.getGyroY(), now);
+        sendMeasurement(baseUri + "/gyroZ", imuValueReading.getGyroZ(), now);
+//        TODO: disabled for now
+//        sendMeasurement(baseUri + "/cmpX", imuValueReading.getCmpX(), imuValueReading.getTimestamp());
+//        sendMeasurement(baseUri + "/cmpY", imuValueReading.getCmpY(), imuValueReading.getTimestamp());
+//        sendMeasurement(baseUri + "/cmpZ", imuValueReading.getCmpZ(), imuValueReading.getTimestamp());
     }
-    
-    private void sendDoubleValueReading(String baseUri, Message message) throws Exception {
-        DoubleValueReading doubleValueReading = mapper.readValue(message.getBody(), DoubleValueReading.class);
+
+    private void sendDoubleValueReading(String baseUri, Message message) throws IllegalAccessException, IOException {
+        final long now = System.currentTimeMillis();
+        final DoubleValueReading doubleValueReading = mapper.readValue(message.getBody(), DoubleValueReading.class);
         if (hasNullField(doubleValueReading)) {
+            log.error("baseUri: {}, null field {}", baseUri, doubleValueReading);
             return;
         }
-        sendMeasurement(baseUri + "/x", doubleValueReading.getX(), doubleValueReading.getTimestamp());
-        sendMeasurement(baseUri + "/y", doubleValueReading.getY(), doubleValueReading.getTimestamp());
+        sendMeasurement(baseUri + "/x", doubleValueReading.getX(), now);
+        sendMeasurement(baseUri + "/y", doubleValueReading.getY(), now);
     }
     
-    private boolean hasNullField(Object valueReading) throws IllegalAccessException {
-        Set<String> nullFields = new HashSet<>();
-        for (Field f : valueReading.getClass().getDeclaredFields()) {
+    private boolean hasNullField(final Object valueReading) throws IllegalAccessException {
+        final Set<String> nullFields = new HashSet<>();
+        for (final Field f : valueReading.getClass().getDeclaredFields()) {
             f.setAccessible(true);
             if (f.get(valueReading) == null) {
                 nullFields.add(f.getName());
             }
         }
-        if (nullFields.size() > 0) {
-            log.error("Field{} {} are null.", nullFields.size() > 1 ? "s" : "", String.join(", ", nullFields));
+        if (!nullFields.isEmpty()) {
+            log.error("null fields [{}]", String.join(", ", nullFields));
             return true;
         }
         return false;
