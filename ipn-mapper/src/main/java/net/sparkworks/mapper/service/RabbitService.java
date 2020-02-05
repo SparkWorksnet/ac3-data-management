@@ -30,12 +30,12 @@ import java.util.stream.Stream;
 public class RabbitService {
     
     private static final String MESSAGE_TEMPLATE = "%s,%f,%d";
-    private static final String DEBUG_SEND_FORMAT = "Sending [lastTemp: %f] to [%s,%s] %s";
+    private static final String DEBUG_SEND_FORMAT = "Sending [skinresponse: %f] to [%s,%s] %s";
     private static final String QUEUE_DATA = "${rabbitmq.serverB.queueData}";
     private static final String QUEUE_COMMAND = "${rabbitmq.queueCommands}";
     private final ObjectMapper mapper = new ObjectMapper();
 
-    private static final Map<String, Double> lastTemperatureValue = new HashMap<>();
+    private static final Map<String, Double> lastSkinResponseValue = new HashMap<>();
     private static final Set<String> SINGLE_VALUE_READING_DATA_TYPES = new HashSet<>(Arrays.asList(
             "temperature",
             "skinresponse",
@@ -69,16 +69,16 @@ public class RabbitService {
     @Async
     public void sendMeasurement(final String uri, final Double reading, final long timestamp) {
         final String deviceName = uri.split("/")[0];
-        if (uri.endsWith("temperature")) {
-            lastTemperatureValue.put(deviceName, reading);
+        if (uri.endsWith("skinresponse")) {
+            lastSkinResponseValue.put(deviceName, reading);
         }
-        if (lastTemperatureValue.containsKey(deviceName) && lastTemperatureValue.get(deviceName) > 30) {
+        if (lastSkinResponseValue.containsKey(deviceName) && lastSkinResponseValue.get(deviceName) > 0) {
             final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
-            log.info(String.format(DEBUG_SEND_FORMAT, lastTemperatureValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
+            log.info(String.format(DEBUG_SEND_FORMAT, lastSkinResponseValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
             rabbitTemplate.send(rabbitQueueSend, rabbitQueueSend, new Message(message.getBytes(), new MessageProperties()));
         } else {
             final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
-            log.warn(String.format("Will not send the following measurement: " + DEBUG_SEND_FORMAT, lastTemperatureValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
+            log.warn(String.format("Will not send the following measurement: " + DEBUG_SEND_FORMAT, lastSkinResponseValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
         }
     }
 
