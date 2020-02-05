@@ -72,7 +72,7 @@ public class RabbitService {
         if (uri.endsWith("skinresponse")) {
             lastSkinResponseValue.put(deviceName, reading);
         }
-        if (lastSkinResponseValue.containsKey(deviceName) && lastSkinResponseValue.get(deviceName) > 0) {
+        if (lastSkinResponseValue.containsKey(deviceName) && lastSkinResponseValue.get(deviceName) > 5) {
             final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
             log.info(String.format(DEBUG_SEND_FORMAT, lastSkinResponseValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
             rabbitTemplate.send(rabbitQueueSend, rabbitQueueSend, new Message(message.getBytes(), new MessageProperties()));
