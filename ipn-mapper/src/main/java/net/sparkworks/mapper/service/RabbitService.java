@@ -68,12 +68,18 @@ public class RabbitService {
 
     @Async
     public void sendMeasurement(final String uri, final Double reading, final long timestamp) {
+        final String deviceName = uri.split("/")[0];
         if (uri.endsWith("temperature")) {
-            lastTemperatureValue.put(uri.split("/")[0], reading);
+            lastTemperatureValue.put(deviceName, reading);
         }
-        final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
-        log.info(String.format(DEBUG_SEND_FORMAT, lastTemperatureValue.get(uri.split("/")[0]), rabbitQueueSend, rabbitQueueSend, message));
-        rabbitTemplate.send(rabbitQueueSend, rabbitQueueSend, new Message(message.getBytes(), new MessageProperties()));
+        if (lastTemperatureValue.containsKey(deviceName) && lastTemperatureValue.get(deviceName) > 30) {
+            final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
+            log.info(String.format(DEBUG_SEND_FORMAT, lastTemperatureValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
+            rabbitTemplate.send(rabbitQueueSend, rabbitQueueSend, new Message(message.getBytes(), new MessageProperties()));
+        } else {
+            final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
+            log.warn(String.format("Will not send the following measurement: " + DEBUG_SEND_FORMAT, lastTemperatureValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
+        }
     }
 
     //RabbitMQ listener for commands from SPARKS
