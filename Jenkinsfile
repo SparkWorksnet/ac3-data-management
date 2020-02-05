@@ -4,7 +4,7 @@ pipeline {
         booleanParam(name: 'TEST', defaultValue: true, description: '')
         booleanParam(name: 'BUILD', defaultValue: true, description: '')
         booleanParam(name: 'DOCKER_DEPLOY', defaultValue: true, description: 'Build and push new docker image to docker registry')
-        //booleanParam(name: 'SWARM_DEPLOY', defaultValue: false, description: 'Deploy Service to Swarm cluster')
+        booleanParam(name: 'SWARM_DEPLOY', defaultValue: true, description: 'Deploy Service to Swarm cluster')
     }
 
     tools {

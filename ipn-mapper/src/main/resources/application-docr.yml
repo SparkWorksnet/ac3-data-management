@@ -2,10 +2,11 @@ rabbitmq:
   server: "${SPARKS_RABBIT_HOST}"
   port: "${SPARKS_RABBIT_PORT}"
   username: "${IPN_MAPPER_CLIENT_ID}"
-  password: "${IPN_MAPPER_CLIENT_SECRET}"
+  password: ${smartwork_ipn_mapper_client_secret}
+  queueCommands: "${rabbitmq.username}-commands"
   queueSend: "smartwork-ipn-send"
   serverB:
     host: "${SMARTWORK_RABBIT_HOST}"
     port: "${SMARTWORK_RABBIT_PORT}"
     username: "${SMARTWORK_RABBIT_USERNAME}"
-    password: "${SMARTWORK_RABBIT_PASSWORD}"
+    password: ${smartwork_rabbitmq_pass}
