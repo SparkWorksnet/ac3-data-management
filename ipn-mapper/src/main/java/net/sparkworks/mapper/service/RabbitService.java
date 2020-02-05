@@ -17,7 +17,9 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -28,11 +30,12 @@ import java.util.stream.Stream;
 public class RabbitService {
     
     private static final String MESSAGE_TEMPLATE = "%s,%f,%d";
-    private static final String DEBUG_SEND_FORMAT = "Sending to [%s,%s] %s";
+    private static final String DEBUG_SEND_FORMAT = "Sending [lastTemp: %f] to [%s,%s] %s";
     private static final String QUEUE_DATA = "${rabbitmq.serverB.queueData}";
     private static final String QUEUE_COMMAND = "${rabbitmq.queueCommands}";
     private final ObjectMapper mapper = new ObjectMapper();
 
+    private static final Map<String, Double> lastTemperatureValue = new HashMap<>();
     private static final Set<String> SINGLE_VALUE_READING_DATA_TYPES = new HashSet<>(Arrays.asList(
             "temperature",
             "skinresponse",
@@ -50,8 +53,8 @@ public class RabbitService {
             .flatMap(Set::stream)
             .collect(Collectors.toSet());
     
-    @Value("${rabbitmq.username}")
-    private String clientId;
+    @Value("${rabbitmq.uriPrefix}")
+    private String uriPrefix;
 
     @Value("${rabbitmq.queueSend}")
     private String rabbitQueueSend;
@@ -65,8 +68,11 @@ public class RabbitService {
 
     @Async
     public void sendMeasurement(final String uri, final Double reading, final long timestamp) {
-        final String message = String.format(MESSAGE_TEMPLATE, clientId + "-" + uri, reading, timestamp);
-        log.info(String.format(DEBUG_SEND_FORMAT, rabbitQueueSend, rabbitQueueSend, message));
+        if (uri.endsWith("temperature")) {
+            lastTemperatureValue.put(uri.split("/")[0], reading);
+        }
+        final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
+        log.info(String.format(DEBUG_SEND_FORMAT, lastTemperatureValue.get(uri.split("/")[0]), rabbitQueueSend, rabbitQueueSend, message));
         rabbitTemplate.send(rabbitQueueSend, rabbitQueueSend, new Message(message.getBytes(), new MessageProperties()));
     }
 
