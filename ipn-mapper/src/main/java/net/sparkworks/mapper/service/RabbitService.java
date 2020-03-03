@@ -28,31 +28,26 @@ import java.util.stream.Stream;
 @Service
 @RequiredArgsConstructor
 public class RabbitService {
-    
+
+    private static final long TICKS_AT_EPOCH = 62135596800000L;
+    private static final long TICKS_PER_MILLISECOND = 10000;
+
     private static final String MESSAGE_TEMPLATE = "%s,%f,%d";
     private static final String DEBUG_SEND_FORMAT = "Sending [skinresponse: %f] to [%s,%s] %s";
-    private static final String QUEUE_DATA = "${rabbitmq.serverB.queueData}";
+    private static final String QUEUE_DATA_V1 = "${rabbitmq.serverB.queueData}";
+    private static final String QUEUE_DATA_V2 = "${rabbitmq.serverB.queueData2}";
     private static final String QUEUE_COMMAND = "${rabbitmq.queueCommands}";
     private final ObjectMapper mapper = new ObjectMapper();
 
     private static final Map<String, Double> lastSkinResponseValue = new HashMap<>();
-    private static final Set<String> SINGLE_VALUE_READING_DATA_TYPES = new HashSet<>(Arrays.asList(
-            "temperature",
-            "skinresponse",
-            "heartrate",
-            "gripforce",
-            "hesitation",
-            "frustration",
-            "neutral"));
-    
+    private static final Set<String> SINGLE_VALUE_READING_DATA_TYPES = new HashSet<>(Arrays.asList("temperature", "skinresponse", "heartrate", "gripforce", "hesitation", "frustration", "neutral"));
+
     private static final Set<String> DOUBLE_VALUE_READING_DATA_TYPES = new HashSet<>(Arrays.asList("mousepos"));
     
     private static final Set<String> IMU_DATA_TYPE = new HashSet<>(Arrays.asList("imu"));
-    
-    private static final Set<String> VALID_DATA_TYPES = Stream.of(SINGLE_VALUE_READING_DATA_TYPES, DOUBLE_VALUE_READING_DATA_TYPES, IMU_DATA_TYPE)
-            .flatMap(Set::stream)
-            .collect(Collectors.toSet());
-    
+
+    private static final Set<String> VALID_DATA_TYPES = Stream.of(SINGLE_VALUE_READING_DATA_TYPES, DOUBLE_VALUE_READING_DATA_TYPES, IMU_DATA_TYPE).flatMap(Set::stream).collect(Collectors.toSet());
+
     @Value("${rabbitmq.uriPrefix}")
     private String uriPrefix;
 
@@ -88,24 +83,45 @@ public class RabbitService {
         log.info("receiveCommandFromSparks '" + new String(message.getBody()) + "'");
     }
 
-    //RabbitMQ listener for data from IPN Mouse
-    @RabbitListener(queues = QUEUE_DATA, containerFactory = "serverB")
-    public void receiveFromSmartWork(final Message message) {
+    //RabbitMQ listener for data from IPN Mouse - data in format 1
+    @RabbitListener(queues = QUEUE_DATA_V1, containerFactory = "serverB")
+    public void receiveFromSmartWorkV1(final Message message) {
         log.debug("received routing key: {} body: {}", message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
-        if (!isValidRoutingKey(message.getMessageProperties().getReceivedRoutingKey())) {
+        if (!isValidRoutingKeyV1(message.getMessageProperties().getReceivedRoutingKey())) {
             log.error("invalid routing key: {}", message.getMessageProperties().getReceivedRoutingKey());
             return;
-        } else if (!isValidBody(message.getBody())) {
+        } else if (!isValidBodyV1(message.getBody())) {
             log.error("invalid body: {}", new String(message.getBody()));
             return;
         }
         try {
-            sendReadings(message);
+            sendReadingsV1(message);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
     }
 
+    //RabbitMQ listener for data from IPN Mouse - data in format 2
+    @RabbitListener(queues = QUEUE_DATA_V2, containerFactory = "serverB")
+    public void receiveFromSmartWorkV2(final Message message) {
+        log.info("received routing key2: {} body: {}", message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
+        if (!isValidRoutingKeyV2(message.getMessageProperties().getReceivedRoutingKey())) {
+            log.error("invalid routing key2: {}", message.getMessageProperties().getReceivedRoutingKey());
+            return;
+        } else if (!isValidBodyV2(message.getBody())) {
+            log.error("invalid body2: {}", new String(message.getBody()));
+            return;
+        }
+        try {
+            sendReadingsV2(message);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
+    }
+
+    private boolean isValidBodyV1(final byte[] body) {
+        return isValidBody(body);
+    }
     private boolean isValidBody(final byte[] body) {
         if (body.length == 0) {
             log.error("Empty body.");
@@ -120,7 +136,7 @@ public class RabbitService {
         }
     }
 
-    private boolean isValidRoutingKey(final String routingKey) {
+    private boolean isValidRoutingKeyV1(final String routingKey) {
         String[] splitRoutingKey = routingKey.split("\\.");
         if (splitRoutingKey.length < 2) {
             log.error("Invalid routing key: \'{}\'.", routingKey);
@@ -133,7 +149,7 @@ public class RabbitService {
         return true;
     }
 
-    private void sendReadings(final Message message) throws IllegalAccessException, IOException {
+    private void sendReadingsV1(final Message message) throws IllegalAccessException, IOException {
         String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
         String dataType = splitRoutingKey[1];
         String baseUri = splitRoutingKey[0] + "/" + splitRoutingKey[1];
@@ -148,29 +164,61 @@ public class RabbitService {
         }
     }
 
+    private boolean isValidBodyV2(final byte[] body) {
+        return isValidBody(body);
+    }
+
+    private boolean isValidRoutingKeyV2(final String routingKey) {
+        String[] splitRoutingKey = routingKey.split("\\.");
+        if (splitRoutingKey.length < 3) {
+            log.error("Invalid routing key: \'{}\'.", routingKey);
+            return false;
+        }
+        if (!VALID_DATA_TYPES.contains(splitRoutingKey[2])) {
+            log.error("Invalid data type \'{}\'.", splitRoutingKey[2]);
+            return false;
+        }
+        return true;
+    }
+
+    private void sendReadingsV2(final Message message) throws IllegalAccessException, IOException {
+        String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
+        String dataType = splitRoutingKey[2];
+        String baseUri = splitRoutingKey[0] + "/" + splitRoutingKey[2];
+        if (SINGLE_VALUE_READING_DATA_TYPES.contains(dataType)) {
+            sendSingleValueReading(baseUri, message);
+        } else if (IMU_DATA_TYPE.contains(dataType)) {
+            sendImuValueReading(baseUri, message);
+        } else if (DOUBLE_VALUE_READING_DATA_TYPES.contains(dataType)) {
+            sendDoubleValueReading(baseUri, message);
+        } else {
+            log.error("No suitable mapper found for routing key \'{}\'.", message.getMessageProperties().getReceivedRoutingKey());
+        }
+    }
+
     private void sendSingleValueReading(final String baseUri, final Message message) throws IllegalAccessException, IOException {
-        final long now = System.currentTimeMillis();
         final SingleValueReading singleValueReading = mapper.readValue(message.getBody(), SingleValueReading.class);
+        long epochTime = singleValueReading.getTimestamp() - TICKS_AT_EPOCH;
         if (hasNullField(singleValueReading)) {
             log.error("baseUri: {}, null field {}", baseUri, singleValueReading);
             return;
         }
-        sendMeasurement(baseUri, singleValueReading.getReading(), now);
+        sendMeasurement(baseUri, singleValueReading.getReading(), epochTime);
     }
 
     private void sendImuValueReading(final String baseUri, final Message message) throws IllegalAccessException, IOException {
-        final long now = System.currentTimeMillis();
         final ImuValueReading imuValueReading = mapper.readValue(message.getBody(), ImuValueReading.class);
+        long epochTime = imuValueReading.getTimestamp() - TICKS_AT_EPOCH;
         if (hasNullField(imuValueReading)) {
             log.error("baseUri: {}, null field {}", baseUri, imuValueReading);
             return;
         }
-        sendMeasurement(baseUri + "/acelX", imuValueReading.getAcelX(), now);
-        sendMeasurement(baseUri + "/acelY", imuValueReading.getAcelY(), now);
-        sendMeasurement(baseUri + "/acelZ", imuValueReading.getAcelZ(), now);
-        sendMeasurement(baseUri + "/gyroX", imuValueReading.getGyroX(), now);
-        sendMeasurement(baseUri + "/gyroY", imuValueReading.getGyroY(), now);
-        sendMeasurement(baseUri + "/gyroZ", imuValueReading.getGyroZ(), now);
+        sendMeasurement(baseUri + "/acelX", imuValueReading.getAcelX(), epochTime);
+        sendMeasurement(baseUri + "/acelY", imuValueReading.getAcelY(), epochTime);
+        sendMeasurement(baseUri + "/acelZ", imuValueReading.getAcelZ(), epochTime);
+        sendMeasurement(baseUri + "/gyroX", imuValueReading.getGyroX(), epochTime);
+        sendMeasurement(baseUri + "/gyroY", imuValueReading.getGyroY(), epochTime);
+        sendMeasurement(baseUri + "/gyroZ", imuValueReading.getGyroZ(), epochTime);
 //        TODO: disabled for now
 //        sendMeasurement(baseUri + "/cmpX", imuValueReading.getCmpX(), imuValueReading.getTimestamp());
 //        sendMeasurement(baseUri + "/cmpY", imuValueReading.getCmpY(), imuValueReading.getTimestamp());
@@ -178,16 +226,16 @@ public class RabbitService {
     }
 
     private void sendDoubleValueReading(String baseUri, Message message) throws IllegalAccessException, IOException {
-        final long now = System.currentTimeMillis();
         final DoubleValueReading doubleValueReading = mapper.readValue(message.getBody(), DoubleValueReading.class);
+        long epochTime = doubleValueReading.getTimestamp() - TICKS_AT_EPOCH;
         if (hasNullField(doubleValueReading)) {
             log.error("baseUri: {}, null field {}", baseUri, doubleValueReading);
             return;
         }
-        sendMeasurement(baseUri + "/x", doubleValueReading.getX(), now);
-        sendMeasurement(baseUri + "/y", doubleValueReading.getY(), now);
+        sendMeasurement(baseUri + "/x", doubleValueReading.getX(), epochTime);
+        sendMeasurement(baseUri + "/y", doubleValueReading.getY(), epochTime);
     }
-    
+
     private boolean hasNullField(final Object valueReading) throws IllegalAccessException {
         final Set<String> nullFields = new HashSet<>();
         for (final Field f : valueReading.getClass().getDeclaredFields()) {
@@ -202,5 +250,5 @@ public class RabbitService {
         }
         return false;
     }
-    
+
 }
