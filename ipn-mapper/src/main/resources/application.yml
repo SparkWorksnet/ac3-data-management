@@ -14,3 +14,16 @@ logging:
 rabbitmq:
   serverB:
     queueData: ipn-mouse-data-sparks
+    queueData2: ipn-mouse-data-sparks2
+
+mapper:
+  skinresponse:
+    threshold: 5
+
+sparks:
+  cargo:
+    address: https://api.sparkworks.net
+    internal: false
+    oauth2:
+      client:
+        accessTokenUrl: "https://sso.sparkworks.net/aa/oauth/token"

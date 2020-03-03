@@ -11,7 +11,6 @@ import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -58,13 +57,13 @@ public class RabbitService {
 
     private final RabbitTemplate rabbitTemplate;
 
-    @Async
-    public void sendMeasurement(final String uri, final Integer reading, final long timestamp) {
-        sendMeasurement(uri, (double) reading, timestamp);
+    private final ResourceService resourceService;
+
+    public Collection<String> sendMeasurement(final String uri, final Integer reading, final long timestamp) {
+        return sendMeasurement(uri, (double) reading, timestamp);
     }
 
-    @Async
-    public void sendMeasurement(final String uri, final Double reading, final long timestamp) {
+    public Collection<String> sendMeasurement(final String uri, final Double reading, final long timestamp) {
         final String deviceName = uri.split("/")[0];
         if (uri.endsWith("skinresponse")) {
             lastSkinResponseValue.put(deviceName, reading);
@@ -73,9 +72,11 @@ public class RabbitService {
             final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
             log.info(String.format(DEBUG_SEND_FORMAT, lastSkinResponseValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
             rabbitTemplate.send(rabbitQueueSend, rabbitQueueSend, new Message(message.getBytes(), new MessageProperties()));
+            return Collections.singletonList(uriPrefix + "-" + uri);
         } else {
             final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
             log.warn(String.format(DEBUG_NOT_SEND_FORMAT, lastSkinResponseValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
+            return Collections.singletonList(uriPrefix + "-" + uri);
         }
     }
 
@@ -166,7 +167,13 @@ public class RabbitService {
         final String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
         final String dataType = splitRoutingKey[2];
         final String baseUri = splitRoutingKey[0] + "/" + splitRoutingKey[2];
-        sendReadings(dataType, baseUri, message);
+        Collection<String> systemNames = sendReadings(dataType, baseUri, message);
+        try {
+            final UUID groupUuid = UUID.fromString(splitRoutingKey[1]);
+            resourceService.placeInCorrectGroup(groupUuid, systemNames);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
     }
 
     private boolean isValidBody(final byte[] body) {
@@ -183,56 +190,61 @@ public class RabbitService {
         }
     }
 
-    private void sendReadings(final String dataType, final String baseUri,final Message message) throws IllegalAccessException, IOException {
+    private Collection<String> sendReadings(final String dataType, final String baseUri, final Message message) throws IllegalAccessException, IOException {
         if (SINGLE_VALUE_READING_DATA_TYPES.contains(dataType)) {
-            sendSingleValueReading(baseUri, message);
+            return sendSingleValueReading(baseUri, message);
         } else if (IMU_DATA_TYPE.contains(dataType)) {
-            sendImuValueReading(baseUri, message);
+            return sendImuValueReading(baseUri, message);
         } else if (DOUBLE_VALUE_READING_DATA_TYPES.contains(dataType)) {
-            sendDoubleValueReading(baseUri, message);
+            return sendDoubleValueReading(baseUri, message);
         } else {
             log.error("No suitable mapper found for routing key '{}'.", message.getMessageProperties().getReceivedRoutingKey());
+            return Collections.emptySet();
         }
     }
 
-    private void sendSingleValueReading(final String baseUri, final Message message) throws IllegalAccessException, IOException {
+    private Collection<String> sendSingleValueReading(final String baseUri, final Message message) throws IllegalAccessException, IOException {
         final SingleValueReading singleValueReading = mapper.readValue(message.getBody(), SingleValueReading.class);
         long epochTime = singleValueReading.getTimestamp() - TICKS_AT_EPOCH;
         if (hasNullField(singleValueReading)) {
             log.error("baseUri: {}, null field {}", baseUri, singleValueReading);
-            return;
+            return Collections.emptySet();
         }
-        sendMeasurement(baseUri, singleValueReading.getReading(), epochTime);
+        return sendMeasurement(baseUri, singleValueReading.getReading(), epochTime);
     }
 
-    private void sendImuValueReading(final String baseUri, final Message message) throws IllegalAccessException, IOException {
+    private Collection<String> sendImuValueReading(final String baseUri, final Message message) throws IllegalAccessException, IOException {
+        final Set<String> systemNames = new HashSet<>();
         final ImuValueReading imuValueReading = mapper.readValue(message.getBody(), ImuValueReading.class);
         long epochTime = imuValueReading.getTimestamp() - TICKS_AT_EPOCH;
         if (hasNullField(imuValueReading)) {
             log.error("baseUri: {}, null field {}", baseUri, imuValueReading);
-            return;
+            return systemNames;
         }
-        sendMeasurement(baseUri + "/acelX", imuValueReading.getAcelX(), epochTime);
-        sendMeasurement(baseUri + "/acelY", imuValueReading.getAcelY(), epochTime);
-        sendMeasurement(baseUri + "/acelZ", imuValueReading.getAcelZ(), epochTime);
-        sendMeasurement(baseUri + "/gyroX", imuValueReading.getGyroX(), epochTime);
-        sendMeasurement(baseUri + "/gyroY", imuValueReading.getGyroY(), epochTime);
-        sendMeasurement(baseUri + "/gyroZ", imuValueReading.getGyroZ(), epochTime);
+        systemNames.addAll(sendMeasurement(baseUri + "/acelX", imuValueReading.getAcelX(), epochTime));
+        systemNames.addAll(sendMeasurement(baseUri + "/acelY", imuValueReading.getAcelY(), epochTime));
+        systemNames.addAll(sendMeasurement(baseUri + "/acelZ", imuValueReading.getAcelZ(), epochTime));
+        systemNames.addAll(sendMeasurement(baseUri + "/gyroX", imuValueReading.getGyroX(), epochTime));
+        systemNames.addAll(sendMeasurement(baseUri + "/gyroY", imuValueReading.getGyroY(), epochTime));
+        systemNames.addAll(sendMeasurement(baseUri + "/gyroZ", imuValueReading.getGyroZ(), epochTime));
 //        TODO: disabled for now
 //        sendMeasurement(baseUri + "/cmpX", imuValueReading.getCmpX(), imuValueReading.getTimestamp());
 //        sendMeasurement(baseUri + "/cmpY", imuValueReading.getCmpY(), imuValueReading.getTimestamp());
 //        sendMeasurement(baseUri + "/cmpZ", imuValueReading.getCmpZ(), imuValueReading.getTimestamp());
+        return systemNames;
     }
 
-    private void sendDoubleValueReading(String baseUri, Message message) throws IllegalAccessException, IOException {
+    private Collection<String> sendDoubleValueReading(String baseUri, Message message) throws IllegalAccessException, IOException {
+        final Set<String> systemNames = new HashSet<>();
         final DoubleValueReading doubleValueReading = mapper.readValue(message.getBody(), DoubleValueReading.class);
         long epochTime = doubleValueReading.getTimestamp() - TICKS_AT_EPOCH;
         if (hasNullField(doubleValueReading)) {
             log.error("baseUri: {}, null field {}", baseUri, doubleValueReading);
-            return;
+            return systemNames;
         }
-        sendMeasurement(baseUri + "/x", doubleValueReading.getX(), epochTime);
-        sendMeasurement(baseUri + "/y", doubleValueReading.getY(), epochTime);
+        systemNames.addAll(sendMeasurement(baseUri + "/x", doubleValueReading.getX(), epochTime));
+        systemNames.addAll(sendMeasurement(baseUri + "/y", doubleValueReading.getY(), epochTime));
+        return systemNames;
     }
 
     private boolean hasNullField(final Object valueReading) throws IllegalAccessException {
