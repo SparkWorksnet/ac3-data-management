@@ -36,7 +36,7 @@ public class RabbitService {
     private static final String QUEUE_COMMAND = "${rabbitmq.queueCommands}";
 
     @Value("${mapper.skinresponse.threshold}")
-    private final double skinResponseThreshold;
+    private final Double skinResponseThreshold;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
