@@ -68,6 +68,16 @@
             </snapshots>
             <url>http://artifactory.sparkworks.net/nexus/repository/maven-snapshots/</url>
         </repository>
+        <repository>
+            <id>repository.ru1</id>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <url>http://ru1.cti.gr/maven/</url>
+        </repository>
     </repositories>
 
     <build>
