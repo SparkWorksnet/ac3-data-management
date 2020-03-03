@@ -16,11 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -33,18 +29,24 @@ public class RabbitService {
     private static final long TICKS_PER_MILLISECOND = 10000;
 
     private static final String MESSAGE_TEMPLATE = "%s,%f,%d";
-    private static final String DEBUG_SEND_FORMAT = "Sending [skinresponse: %f] to [%s,%s] %s";
+    private static final String DEBUG_FORMAT = "[skinresponse: %f] to [%s,%s] %s";
+    private static final String DEBUG_SEND_FORMAT = "Sending: " + DEBUG_FORMAT;
+    private static final String DEBUG_NOT_SEND_FORMAT = "Will not process the following measurement: " + DEBUG_FORMAT;
     private static final String QUEUE_DATA_V1 = "${rabbitmq.serverB.queueData}";
     private static final String QUEUE_DATA_V2 = "${rabbitmq.serverB.queueData2}";
     private static final String QUEUE_COMMAND = "${rabbitmq.queueCommands}";
+
+    @Value("${mapper.skinresponse.threshold}")
+    private final double skinResponseThreshold;
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     private static final Map<String, Double> lastSkinResponseValue = new HashMap<>();
     private static final Set<String> SINGLE_VALUE_READING_DATA_TYPES = new HashSet<>(Arrays.asList("temperature", "skinresponse", "heartrate", "gripforce", "hesitation", "frustration", "neutral"));
 
-    private static final Set<String> DOUBLE_VALUE_READING_DATA_TYPES = new HashSet<>(Arrays.asList("mousepos"));
+    private static final Set<String> DOUBLE_VALUE_READING_DATA_TYPES = new HashSet<>(Collections.singletonList("mousepos"));
     
-    private static final Set<String> IMU_DATA_TYPE = new HashSet<>(Arrays.asList("imu"));
+    private static final Set<String> IMU_DATA_TYPE = new HashSet<>(Collections.singletonList("imu"));
 
     private static final Set<String> VALID_DATA_TYPES = Stream.of(SINGLE_VALUE_READING_DATA_TYPES, DOUBLE_VALUE_READING_DATA_TYPES, IMU_DATA_TYPE).flatMap(Set::stream).collect(Collectors.toSet());
 
@@ -67,31 +69,31 @@ public class RabbitService {
         if (uri.endsWith("skinresponse")) {
             lastSkinResponseValue.put(deviceName, reading);
         }
-        if (lastSkinResponseValue.containsKey(deviceName) && lastSkinResponseValue.get(deviceName) > 5) {
+        if (lastSkinResponseValue.containsKey(deviceName) && lastSkinResponseValue.get(deviceName) > skinResponseThreshold) {
             final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
             log.info(String.format(DEBUG_SEND_FORMAT, lastSkinResponseValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
             rabbitTemplate.send(rabbitQueueSend, rabbitQueueSend, new Message(message.getBytes(), new MessageProperties()));
         } else {
             final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
-            log.warn(String.format("Will not send the following measurement: " + DEBUG_SEND_FORMAT, lastSkinResponseValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
+            log.warn(String.format(DEBUG_NOT_SEND_FORMAT, lastSkinResponseValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
         }
     }
 
     //RabbitMQ listener for commands from SPARKS
     @RabbitListener(queues = QUEUE_COMMAND)
     public void receiveCommandFromSparks(final Message message) {
-        log.info("receiveCommandFromSparks '" + new String(message.getBody()) + "'");
+        log.info("[{}] command '{}'", QUEUE_COMMAND, new String(message.getBody()));
     }
 
     //RabbitMQ listener for data from IPN Mouse - data in format 1
     @RabbitListener(queues = QUEUE_DATA_V1, containerFactory = "serverB")
     public void receiveFromSmartWorkV1(final Message message) {
-        log.debug("received routing key: {} body: {}", message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
+        log.debug("[{}] routingKey:{} body:{}", QUEUE_DATA_V1, message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
         if (!isValidRoutingKeyV1(message.getMessageProperties().getReceivedRoutingKey())) {
-            log.error("invalid routing key: {}", message.getMessageProperties().getReceivedRoutingKey());
+            log.error("[{}] invalid routingKey:{}", QUEUE_DATA_V1, message.getMessageProperties().getReceivedRoutingKey());
             return;
         } else if (!isValidBodyV1(message.getBody())) {
-            log.error("invalid body: {}", new String(message.getBody()));
+            log.error("[{}] invalid body:{}", QUEUE_DATA_V1, new String(message.getBody()));
             return;
         }
         try {
@@ -101,15 +103,39 @@ public class RabbitService {
         }
     }
 
+    private boolean isValidRoutingKeyV1(final String routingKey) {
+        String[] splitRoutingKey = routingKey.split("\\.");
+        if (splitRoutingKey.length < 2) {
+            log.error("Invalid routing key: '{}'.", routingKey);
+            return false;
+        }
+        if (!VALID_DATA_TYPES.contains(splitRoutingKey[1])) {
+            log.error("Invalid data type '{}'.", splitRoutingKey[1]);
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isValidBodyV1(final byte[] body) {
+        return isValidBody(body);
+    }
+
+    private void sendReadingsV1(final Message message) throws IllegalAccessException, IOException {
+        final String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
+        final String dataType = splitRoutingKey[1];
+        final String baseUri = splitRoutingKey[0] + "/" + splitRoutingKey[1];
+        sendReadings(dataType, baseUri, message);
+    }
+
     //RabbitMQ listener for data from IPN Mouse - data in format 2
     @RabbitListener(queues = QUEUE_DATA_V2, containerFactory = "serverB")
     public void receiveFromSmartWorkV2(final Message message) {
-        log.info("received routing key2: {} body: {}", message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
+        log.debug("[{}] routingKey:{} body:{}", QUEUE_DATA_V2, message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
         if (!isValidRoutingKeyV2(message.getMessageProperties().getReceivedRoutingKey())) {
-            log.error("invalid routing key2: {}", message.getMessageProperties().getReceivedRoutingKey());
+            log.error("[{}] invalid routingKey:{}", QUEUE_DATA_V2, message.getMessageProperties().getReceivedRoutingKey());
             return;
         } else if (!isValidBodyV2(message.getBody())) {
-            log.error("invalid body2: {}", new String(message.getBody()));
+            log.error("[{}] invalid body:{}", QUEUE_DATA_V2, new String(message.getBody()));
             return;
         }
         try {
@@ -119,9 +145,30 @@ public class RabbitService {
         }
     }
 
-    private boolean isValidBodyV1(final byte[] body) {
+    private boolean isValidRoutingKeyV2(final String routingKey) {
+        String[] splitRoutingKey = routingKey.split("\\.");
+        if (splitRoutingKey.length < 3) {
+            log.error("Invalid routing key: '{}'.", routingKey);
+            return false;
+        }
+        if (!VALID_DATA_TYPES.contains(splitRoutingKey[2])) {
+            log.error("Invalid data type '{}'.", splitRoutingKey[2]);
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isValidBodyV2(final byte[] body) {
         return isValidBody(body);
     }
+
+    private void sendReadingsV2(final Message message) throws IllegalAccessException, IOException {
+        final String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
+        final String dataType = splitRoutingKey[2];
+        final String baseUri = splitRoutingKey[0] + "/" + splitRoutingKey[2];
+        sendReadings(dataType, baseUri, message);
+    }
+
     private boolean isValidBody(final byte[] body) {
         if (body.length == 0) {
             log.error("Empty body.");
@@ -136,23 +183,7 @@ public class RabbitService {
         }
     }
 
-    private boolean isValidRoutingKeyV1(final String routingKey) {
-        String[] splitRoutingKey = routingKey.split("\\.");
-        if (splitRoutingKey.length < 2) {
-            log.error("Invalid routing key: \'{}\'.", routingKey);
-            return false;
-        }
-        if (!VALID_DATA_TYPES.contains(splitRoutingKey[1])) {
-            log.error("Invalid data type \'{}\'.", splitRoutingKey[1]);
-            return false;
-        }
-        return true;
-    }
-
-    private void sendReadingsV1(final Message message) throws IllegalAccessException, IOException {
-        String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
-        String dataType = splitRoutingKey[1];
-        String baseUri = splitRoutingKey[0] + "/" + splitRoutingKey[1];
+    private void sendReadings(final String dataType, final String baseUri,final Message message) throws IllegalAccessException, IOException {
         if (SINGLE_VALUE_READING_DATA_TYPES.contains(dataType)) {
             sendSingleValueReading(baseUri, message);
         } else if (IMU_DATA_TYPE.contains(dataType)) {
@@ -160,39 +191,7 @@ public class RabbitService {
         } else if (DOUBLE_VALUE_READING_DATA_TYPES.contains(dataType)) {
             sendDoubleValueReading(baseUri, message);
         } else {
-            log.error("No suitable mapper found for routing key \'{}\'.", message.getMessageProperties().getReceivedRoutingKey());
-        }
-    }
-
-    private boolean isValidBodyV2(final byte[] body) {
-        return isValidBody(body);
-    }
-
-    private boolean isValidRoutingKeyV2(final String routingKey) {
-        String[] splitRoutingKey = routingKey.split("\\.");
-        if (splitRoutingKey.length < 3) {
-            log.error("Invalid routing key: \'{}\'.", routingKey);
-            return false;
-        }
-        if (!VALID_DATA_TYPES.contains(splitRoutingKey[2])) {
-            log.error("Invalid data type \'{}\'.", splitRoutingKey[2]);
-            return false;
-        }
-        return true;
-    }
-
-    private void sendReadingsV2(final Message message) throws IllegalAccessException, IOException {
-        String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
-        String dataType = splitRoutingKey[2];
-        String baseUri = splitRoutingKey[0] + "/" + splitRoutingKey[2];
-        if (SINGLE_VALUE_READING_DATA_TYPES.contains(dataType)) {
-            sendSingleValueReading(baseUri, message);
-        } else if (IMU_DATA_TYPE.contains(dataType)) {
-            sendImuValueReading(baseUri, message);
-        } else if (DOUBLE_VALUE_READING_DATA_TYPES.contains(dataType)) {
-            sendDoubleValueReading(baseUri, message);
-        } else {
-            log.error("No suitable mapper found for routing key \'{}\'.", message.getMessageProperties().getReceivedRoutingKey());
+            log.error("No suitable mapper found for routing key '{}'.", message.getMessageProperties().getReceivedRoutingKey());
         }
     }
 
