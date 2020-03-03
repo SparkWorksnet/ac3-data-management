@@ -11,3 +11,12 @@ rabbitmq:
     port: "${SMARTWORK_RABBIT_PORT}"
     username: "${SMARTWORK_RABBIT_USERNAME}"
     password: ${smartwork_rabbitmq_pass}
+
+sparks:
+  cargo:
+    oauth2:
+      client:
+        clientId: ${rabbitmq.username}
+        clientSecret: ${rabbitmq.password}
+        username: ${IPN_MAPPER_USERNAME}
+        password: ${IPN_MAPPER_PASSWORD}
