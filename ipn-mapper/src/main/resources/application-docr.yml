@@ -16,7 +16,7 @@ sparks:
   cargo:
     oauth2:
       client:
-        clientId: ${rabbitmq.username}
-        clientSecret: ${rabbitmq.password}
+        clientId: ${IPN_MAPPER_CL}
+        clientSecret: ${IPN_MAPPER_CS}
         username: ${IPN_MAPPER_USERNAME}
         password: ${IPN_MAPPER_PASSWORD}
