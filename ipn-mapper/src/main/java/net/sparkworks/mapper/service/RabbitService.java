@@ -248,27 +248,28 @@ public class RabbitService {
         final MouseDataWrapper md = mapper.readValue(new String(message.getBody()),
                 MouseDataWrapper.class);
         log.debug("[{}] body:{}", QUEUE_DATA_V3, md);
-        sendPreparedReading(baseUri + "/frustration", md.getUserData().getFrustration(), md.getMouseData().getTimestamp());
-        sendPreparedReading(baseUri + "/hesitation", md.getUserData().getHesitation(), md.getMouseData().getTimestamp());
-        sendPreparedReading(baseUri + "/neutral", md.getUserData().getNeutral(), md.getMouseData().getTimestamp());
+        
+        final Set<String> keys = new HashSet<>();
+        keys.addAll(sendPreparedReading(baseUri + "/frustration", md.getUserData().getFrustration(), md.getMouseData().getTimestamp()));
+        keys.addAll(sendPreparedReading(baseUri + "/hesitation", md.getUserData().getHesitation(), md.getMouseData().getTimestamp()));
+        keys.addAll(sendPreparedReading(baseUri + "/neutral", md.getUserData().getNeutral(), md.getMouseData().getTimestamp()));
     
-        sendPreparedReading(baseUri + "/gripforce", md.getMouseData().getGripForce(), md.getMouseData().getTimestamp());
-        sendPreparedReading(baseUri + "/heartrate", md.getMouseData().getHeartRate(), md.getMouseData().getTimestamp());
-        sendPreparedReading(baseUri + "/skinresponse", md.getMouseData().getSkinResponse(), md.getMouseData().getTimestamp());
-        sendPreparedReading(baseUri + "/temperature", md.getMouseData().getTemperature(), md.getMouseData().getTimestamp());
-        
-        sendPreparedReading(baseUri + "/imu/acelX", md.getMouseData().getImu().getAcelX(), md.getMouseData().getTimestamp());
-        sendPreparedReading(baseUri + "/imu/acelY", md.getMouseData().getImu().getAcelY(), md.getMouseData().getTimestamp());
-        sendPreparedReading(baseUri + "/imu/acelZ", md.getMouseData().getImu().getAcelZ(), md.getMouseData().getTimestamp());
-        sendPreparedReading(baseUri + "/imu/gyroX", md.getMouseData().getImu().getGyroX(), md.getMouseData().getTimestamp());
-        sendPreparedReading(baseUri + "/imu/gyroY", md.getMouseData().getImu().getGyroY(), md.getMouseData().getTimestamp());
-        sendPreparedReading(baseUri + "/imu/gyroZ", md.getMouseData().getImu().getGyroZ(), md.getMouseData().getTimestamp());
-        
-        sendPreparedReading(baseUri + "/mousepos/x", md.getMouseData().getPosition().getX(), md.getMouseData().getTimestamp());
-        sendPreparedReading(baseUri + "/mousepos/y", md.getMouseData().getPosition().getY(), md.getMouseData().getTimestamp());
-        
-        return Collections.emptySet();
+        keys.addAll(sendPreparedReading(baseUri + "/gripforce", md.getMouseData().getGripForce(), md.getMouseData().getTimestamp()));
+        keys.addAll(sendPreparedReading(baseUri + "/heartrate", md.getMouseData().getHeartRate(), md.getMouseData().getTimestamp()));
+        keys.addAll(sendPreparedReading(baseUri + "/skinresponse", md.getMouseData().getSkinResponse(), md.getMouseData().getTimestamp()));
+        keys.addAll(sendPreparedReading(baseUri + "/temperature", md.getMouseData().getTemperature(), md.getMouseData().getTimestamp()));
     
+        keys.addAll(sendPreparedReading(baseUri + "/imu/acelX", md.getMouseData().getImu().getAcelX(), md.getMouseData().getTimestamp()));
+        keys.addAll(sendPreparedReading(baseUri + "/imu/acelY", md.getMouseData().getImu().getAcelY(), md.getMouseData().getTimestamp()));
+        keys.addAll(sendPreparedReading(baseUri + "/imu/acelZ", md.getMouseData().getImu().getAcelZ(), md.getMouseData().getTimestamp()));
+        keys.addAll(sendPreparedReading(baseUri + "/imu/gyroX", md.getMouseData().getImu().getGyroX(), md.getMouseData().getTimestamp()));
+        keys.addAll(sendPreparedReading(baseUri + "/imu/gyroY", md.getMouseData().getImu().getGyroY(), md.getMouseData().getTimestamp()));
+        keys.addAll(sendPreparedReading(baseUri + "/imu/gyroZ", md.getMouseData().getImu().getGyroZ(), md.getMouseData().getTimestamp()));
+    
+        keys.addAll(sendPreparedReading(baseUri + "/mousepos/x", md.getMouseData().getPosition().getX(), md.getMouseData().getTimestamp()));
+        keys.addAll(sendPreparedReading(baseUri + "/mousepos/y", md.getMouseData().getPosition().getY(), md.getMouseData().getTimestamp()));
+        
+        return keys;
     }
     
     private Collection<String> sendPreparedReading(final String baseUri, final Double reading, final Long timestamp) throws IllegalAccessException {
