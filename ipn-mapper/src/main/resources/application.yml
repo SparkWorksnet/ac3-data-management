@@ -12,9 +12,12 @@ logging:
     net.sparkworks.common: DEBUG
 
 rabbitmq:
+  queueCommands: "${rabbitmq.uriPrefix}-commands"
+  queueSend: "${rabbitmq.uriPrefix}-send"
   serverB:
     queueData: ipn-mouse-data-sparks
     queueData2: ipn-mouse-data-sparks2
+    queueData3: ipn-mouse-data-sparks3
 
 mapper:
   skinresponse:
