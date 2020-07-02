@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.sparkworks.mapper.model.DoubleValueReading;
 import net.sparkworks.mapper.model.ImuValueReading;
 import net.sparkworks.mapper.model.SingleValueReading;
+import net.sparkworks.mapper.model.input.MouseDataWrapper;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -33,6 +34,7 @@ public class RabbitService {
     private static final String DEBUG_NOT_SEND_FORMAT = "Will not process the following measurement: " + DEBUG_FORMAT;
     private static final String QUEUE_DATA_V1 = "${rabbitmq.serverB.queueData}";
     private static final String QUEUE_DATA_V2 = "${rabbitmq.serverB.queueData2}";
+    private static final String QUEUE_DATA_V3 = "${rabbitmq.serverB.queueData3}";
     private static final String QUEUE_COMMAND = "${rabbitmq.queueCommands}";
 
     @Value("${mapper.skinresponse.threshold}")
@@ -175,6 +177,44 @@ public class RabbitService {
             log.error(e.getMessage(), e);
         }
     }
+    
+    //RabbitMQ listener for data from IPN Mouse - data in format 3
+    @RabbitListener(queues = QUEUE_DATA_V3, containerFactory = "serverB")
+    public void receiveFromSmartWorkV3(final Message message) {
+        log.debug("[{}] routingKey:{} body:{}", QUEUE_DATA_V3, message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
+        if (!isValidRoutingKeyV3(message.getMessageProperties().getReceivedRoutingKey())) {
+            log.error("[{}] invalid routingKey:{}", QUEUE_DATA_V3, message.getMessageProperties().getReceivedRoutingKey());
+            return;
+        } else {
+            try {
+                sendReadingsV3(message);
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
+            }
+            return;
+        }
+    }
+    
+    private boolean isValidRoutingKeyV3(final String routingKey) {
+        String[] splitRoutingKey = routingKey.split("\\.");
+        if (splitRoutingKey.length < 2) {
+            log.error("Invalid routing key: '{}'.", routingKey);
+            return false;
+        }
+        return true;
+    }
+    
+    private void sendReadingsV3(final Message message) throws IOException, IllegalAccessException {
+        final String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
+        final String baseUri = splitRoutingKey[0];
+        Collection<String> systemNames = sendReadings3(baseUri, message);
+        try {
+            final UUID groupUuid = UUID.fromString(splitRoutingKey[1]);
+            resourceService.placeInCorrectGroup(groupUuid, systemNames);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
+    }
 
     private boolean isValidBody(final byte[] body) {
         if (body.length == 0) {
@@ -202,7 +242,40 @@ public class RabbitService {
             return Collections.emptySet();
         }
     }
-
+    
+    private Collection<String> sendReadings3(final String baseUri, final Message message) throws IllegalAccessException, IOException {
+        
+        final MouseDataWrapper md = mapper.readValue(new String(message.getBody()),
+                MouseDataWrapper.class);
+        log.debug("[{}] body:{}", QUEUE_DATA_V3, md);
+        sendPreparedReading(baseUri + "/frustration", md.getUserData().getFrustration(), md.getMouseData().getTimestamp());
+        sendPreparedReading(baseUri + "/hesitation", md.getUserData().getHesitation(), md.getMouseData().getTimestamp());
+        sendPreparedReading(baseUri + "/neutral", md.getUserData().getNeutral(), md.getMouseData().getTimestamp());
+    
+        sendPreparedReading(baseUri + "/gripforce", md.getMouseData().getGripForce(), md.getMouseData().getTimestamp());
+        sendPreparedReading(baseUri + "/heartrate", md.getMouseData().getHeartRate(), md.getMouseData().getTimestamp());
+        sendPreparedReading(baseUri + "/skinresponse", md.getMouseData().getSkinResponse(), md.getMouseData().getTimestamp());
+        sendPreparedReading(baseUri + "/temperature", md.getMouseData().getTemperature(), md.getMouseData().getTimestamp());
+        
+        sendPreparedReading(baseUri + "/imu/acelX", md.getMouseData().getImu().getAcelX(), md.getMouseData().getTimestamp());
+        sendPreparedReading(baseUri + "/imu/acelY", md.getMouseData().getImu().getAcelY(), md.getMouseData().getTimestamp());
+        sendPreparedReading(baseUri + "/imu/acelZ", md.getMouseData().getImu().getAcelZ(), md.getMouseData().getTimestamp());
+        sendPreparedReading(baseUri + "/imu/gyroX", md.getMouseData().getImu().getGyroX(), md.getMouseData().getTimestamp());
+        sendPreparedReading(baseUri + "/imu/gyroY", md.getMouseData().getImu().getGyroY(), md.getMouseData().getTimestamp());
+        sendPreparedReading(baseUri + "/imu/gyroZ", md.getMouseData().getImu().getGyroZ(), md.getMouseData().getTimestamp());
+        
+        sendPreparedReading(baseUri + "/mousepos/x", md.getMouseData().getPosition().getX(), md.getMouseData().getTimestamp());
+        sendPreparedReading(baseUri + "/mousepos/y", md.getMouseData().getPosition().getY(), md.getMouseData().getTimestamp());
+        
+        return Collections.emptySet();
+    
+    }
+    
+    private Collection<String> sendPreparedReading(final String baseUri, final Double reading, final Long timestamp) throws IllegalAccessException {
+        long epochTime = timestamp - TICKS_AT_EPOCH;
+        return sendMeasurement(baseUri, reading, epochTime);
+    }
+    
     private Collection<String> sendSingleValueReading(final String baseUri, final Message message) throws IllegalAccessException, IOException {
         final SingleValueReading singleValueReading = mapper.readValue(message.getBody(), SingleValueReading.class);
         long epochTime = singleValueReading.getTimestamp() - TICKS_AT_EPOCH;
