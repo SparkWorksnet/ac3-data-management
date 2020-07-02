@@ -210,7 +210,7 @@ public class RabbitService {
         Collection<String> systemNames = sendReadings3(baseUri, message);
         try {
             final UUID groupUuid = UUID.fromString(splitRoutingKey[1]);
-            resourceService.placeInCorrectGroup(groupUuid, systemNames);
+            //resourceService.placeInCorrectGroup(groupUuid, systemNames);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }

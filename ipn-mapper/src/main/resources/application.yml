@@ -1,4 +1,5 @@
 spring.main.web-application-type: none
+spring.main.allow-bean-definition-overriding: true
 
 spring.rabbitmq.host: ${rabbitmq.server}
 spring.rabbitmq.port: ${rabbitmq.port}
