@@ -22,3 +22,4 @@ logging:
   level:
     net.sparkworks.common: ERROR
     net.sparkworks.mapper: INFO
+    org.springframework.amqp.rabbit.connection: DEBUG;
