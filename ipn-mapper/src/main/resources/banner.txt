@@ -4,6 +4,6 @@
  | ||  __/| |\  | | |  | | (_| | |_) | |_) |  __/ |
 |___|_|   |_| \_| |_|  |_|\__,_| .__/| .__/ \___|_|
                                |_|   |_|
-
+Test
 Spring Boot   : ${spring-boot.formatted-version}
 Active profile: ${spring.profiles.active}
