@@ -1,3 +1,5 @@
+spring.main.web-application-type: none
+
 spring.rabbitmq.host: ${rabbitmq.server}
 spring.rabbitmq.port: ${rabbitmq.port}
 spring.rabbitmq.username: ${rabbitmq.username}
