@@ -18,3 +18,7 @@ sparks:
         clientSecret: ${IPN_MAPPER_CS}
         username: ${IPN_MAPPER_USERNAME}
         password: ${IPN_MAPPER_PASSWORD}
+logging:
+  level:
+    net.sparkworks.common: ERROR
+    net.sparkworks.mapper: INFO
