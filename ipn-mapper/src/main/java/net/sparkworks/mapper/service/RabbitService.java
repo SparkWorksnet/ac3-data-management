@@ -210,7 +210,7 @@ public class RabbitService {
         Collection<String> systemNames = sendReadings3(baseUri, message);
         try {
             final UUID groupUuid = UUID.fromString(splitRoutingKey[1]);
-            //resourceService.placeInCorrectGroup(groupUuid, systemNames);
+            resourceService.placeInCorrectGroup(groupUuid, systemNames);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
@@ -248,7 +248,9 @@ public class RabbitService {
         final MouseDataWrapper md = mapper.readValue(new String(message.getBody()),
                 MouseDataWrapper.class);
         log.debug("[{}] body:{}", QUEUE_DATA_V3, md);
-        
+        if (!md.getUserData().getIsActive()) {
+            return Collections.emptySet();
+        }
         final Set<String> keys = new HashSet<>();
         keys.addAll(sendPreparedReading(baseUri + "/frustration", md.getUserData().getFrustration(), md.getMouseData().getTimestamp()));
         keys.addAll(sendPreparedReading(baseUri + "/hesitation", md.getUserData().getHesitation(), md.getMouseData().getTimestamp()));
