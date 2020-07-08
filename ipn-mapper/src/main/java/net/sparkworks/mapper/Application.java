@@ -21,7 +21,7 @@ public class Application extends SpringBootServletInitializer {
     
     @Bean
     MeterRegistryCustomizer<MeterRegistry> metricsCommonTags() {
-        return registry -> registry.config().commonTags("application", "ipn-mapper");
+        return registry -> registry.config().commonTags("application", "ipnmapper");
     }
     
     public static void main(final String[] args) {

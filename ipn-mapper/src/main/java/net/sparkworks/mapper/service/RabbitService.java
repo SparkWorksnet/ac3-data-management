@@ -3,6 +3,8 @@ package net.sparkworks.mapper.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.prometheus.client.CollectorRegistry;
+import io.prometheus.client.Gauge;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sparkworks.mapper.model.DoubleValueReading;
@@ -74,31 +76,33 @@ public class RabbitService {
     private final ResourceService resourceService;
     
     private final MeterRegistry meterRegistry;
+    private final CollectorRegistry collectorRegistry;
     
-    private Counter inputCounterV1, inputCounterV2, inputCounterV3, outputCounter, hostsCounter;
+    private Counter inputCounterV1, inputCounterV2, inputCounterV3, outputCounter;
+    private Gauge hostsCounter;
 
     private Set<String> hosts = new HashSet<>();
     
     @PostConstruct
     public void init(){
-        inputCounterV1 = Counter.builder("ipn-mapper.input.messages")
+        inputCounterV1 = Counter.builder("ipnmapper.input.messages")
                 .tag("format", "1")
                 .description("format 1 input messages")
                 .register(meterRegistry);
-        inputCounterV2 = Counter.builder("ipn-mapper.input.messages")
+        inputCounterV2 = Counter.builder("ipnmapper.input.messages")
                 .tag("format", "2")
                 .description("format 2 input messages")
                 .register(meterRegistry);
-        inputCounterV3 = Counter.builder("ipn-mapper.input.messages")
+        inputCounterV3 = Counter.builder("ipnmapper.input.messages")
                 .tag("format", "3")
                 .description("format 3 input messages")
                 .register(meterRegistry);
-        outputCounter = Counter.builder("ipn-mapper.output.messages")
+        outputCounter = Counter.builder("ipnmapper.output.messages")
                 .description("Output messages")
                 .register(meterRegistry);
-        hostsCounter = Counter.builder("ipn-mapper.hosts.active")
-                .description("Active IPN mouse hosts reporting data")
-                .register(meterRegistry);
+        
+        hostsCounter = Gauge.build("ipnmapper_hosts_active","Active IPN mouse hosts reporting data").create();
+        hostsCounter.register(collectorRegistry);
     }
 
     public Collection<String> sendMeasurement(final String uri, final Integer reading, final long timestamp) {
@@ -382,8 +386,7 @@ public class RabbitService {
     @Scheduled(fixedRate = 60_000)
     public void reportHosts(){
         //set counter to 0 and add current hosts
-        hostsCounter.increment(-hostsCounter.count());
-        hostsCounter.increment(hosts.size());
+        hostsCounter.set(hosts.size());
         log.info("Active Hosts[{}]: [{}]", hosts.size(), StringUtils.join(hosts, ","));
         hosts.clear();
     }

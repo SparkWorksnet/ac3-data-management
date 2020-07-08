@@ -33,7 +33,7 @@ management:
     web:
       server:
         auto-time-requests: true
-        requests-metric-name: 'ipn-mapper.http.metrics'
+        requests-metric-name: 'ipnmapper.http.metrics'
 
 rabbitmq:
   queueCommands: "${rabbitmq.uriPrefix}-commands"
