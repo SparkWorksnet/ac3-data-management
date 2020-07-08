@@ -95,7 +95,7 @@ public class RabbitService {
         outputCounter.increment();
         
         final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
-        log.info(String.format(DEBUG_SEND_FORMAT, rabbitQueueSend, rabbitQueueSend, message));
+        log.debug(String.format(DEBUG_SEND_FORMAT, rabbitQueueSend, rabbitQueueSend, message));
         rabbitTemplate.send(rabbitQueueSend, rabbitQueueSend, new Message(message.getBytes(), new MessageProperties()));
         return Collections.singletonList(uriPrefix + "-" + uri);
     }
