@@ -9,17 +9,26 @@ import net.sparkworks.mapper.model.DoubleValueReading;
 import net.sparkworks.mapper.model.ImuValueReading;
 import net.sparkworks.mapper.model.SingleValueReading;
 import net.sparkworks.mapper.model.input.MouseDataWrapper;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -67,6 +76,8 @@ public class RabbitService {
     private final MeterRegistry meterRegistry;
     
     private Counter inputCounterV1, inputCounterV2, inputCounterV3, outputCounter;
+
+    private Set<String> hosts = new HashSet<>();
     
     @PostConstruct
     public void init(){
@@ -147,6 +158,7 @@ public class RabbitService {
         final String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
         final String dataType = splitRoutingKey[1];
         final String baseUri = splitRoutingKey[0] + "/" + splitRoutingKey[1];
+        registerHost(splitRoutingKey[0]);
         sendReadings(dataType, baseUri, message);
     }
 
@@ -191,6 +203,7 @@ public class RabbitService {
         final String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
         final String dataType = splitRoutingKey[2];
         final String baseUri = splitRoutingKey[0] + "/" + splitRoutingKey[2];
+        registerHost(splitRoutingKey[0]);
         Collection<String> systemNames = sendReadings(dataType, baseUri, message);
         try {
             final UUID groupUuid = UUID.fromString(splitRoutingKey[1]);
@@ -231,6 +244,7 @@ public class RabbitService {
     private void sendReadingsV3(final Message message) throws IOException, IllegalAccessException {
         final String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
         final String baseUri = splitRoutingKey[0];
+        registerHost(splitRoutingKey[0]);
         Collection<String> systemNames = sendReadings3(baseUri, message);
         try {
             final UUID groupUuid = UUID.fromString(splitRoutingKey[1]);
@@ -362,4 +376,13 @@ public class RabbitService {
         return false;
     }
 
+    @Scheduled(fixedRate = 60_000)
+    public void reportHosts(){
+        log.info("Active Hosts[{}]: [{}]", hosts.size(), StringUtils.join(hosts, ","));
+        hosts.clear();
+    }
+    
+    private void registerHost(final String host) {
+        hosts.add(host);
+    }
 }
