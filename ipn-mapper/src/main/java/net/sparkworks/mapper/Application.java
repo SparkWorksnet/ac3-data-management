@@ -20,7 +20,7 @@ public class Application {
     
     @Bean
     MeterRegistryCustomizer<MeterRegistry> metricsCommonTags() {
-        return registry -> registry.config().commonTags("application", "hermes");
+        return registry -> registry.config().commonTags("application", "ipn-mapper");
     }
     
     public static void main(final String[] args) {
