@@ -2,7 +2,6 @@ package net.sparkworks.mapper;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import net.sparkworks.cargo.client.config.CargoClientConfig;
-import net.sparkworks.common.annotation.EnableMethodMonitor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -16,7 +15,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 @EnableCaching
 @EnableScheduling
-@EnableMethodMonitor
 @EnableConfigurationProperties
 @SpringBootApplication(scanBasePackages = {"net.sparkworks.mapper", CargoClientConfig.CARGO_CLIENT_BASE_PACKAGE_NAME})
 public class Application extends SpringBootServletInitializer {
