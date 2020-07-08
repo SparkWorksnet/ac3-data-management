@@ -1,6 +1,8 @@
 package net.sparkworks.mapper.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sparkworks.mapper.model.DoubleValueReading;
@@ -14,6 +16,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.*;
@@ -29,7 +32,7 @@ public class RabbitService {
     private static final long TICKS_PER_MILLISECOND = 10000;
 
     private static final String MESSAGE_TEMPLATE = "%s,%f,%d";
-    private static final String DEBUG_FORMAT = "[skinresponse: %f] to [%s,%s] %s";
+    private static final String DEBUG_FORMAT = "to [%s,%s] %s";
     private static final String DEBUG_SEND_FORMAT = "Sending: " + DEBUG_FORMAT;
     private static final String DEBUG_NOT_SEND_FORMAT = "Will not process the following measurement: " + DEBUG_FORMAT;
     private static final String QUEUE_DATA_V1 = "${rabbitmq.serverB.queueData}";
@@ -60,26 +63,41 @@ public class RabbitService {
     private final RabbitTemplate rabbitTemplate;
 
     private final ResourceService resourceService;
+    
+    private final MeterRegistry meterRegistry;
+    
+    private Counter inputCounterV1, inputCounterV2, inputCounterV3, outputCounter;
+    
+    @PostConstruct
+    public void init(){
+        inputCounterV1 = Counter.builder("ipn-mapper.input.messages")
+                .tag("format", "1")
+                .description("format 1 input messages")
+                .register(meterRegistry);
+        inputCounterV2 = Counter.builder("ipn-mapper.input.messages")
+                .tag("format", "2")
+                .description("format 2 input messages")
+                .register(meterRegistry);
+        inputCounterV3 = Counter.builder("ipn-mapper.input.messages")
+                .tag("format", "3")
+                .description("format 3 input messages")
+                .register(meterRegistry);
+        outputCounter = Counter.builder("ipn-mapper.output.messages")
+                .description("Output messages")
+                .register(meterRegistry);
+    }
 
     public Collection<String> sendMeasurement(final String uri, final Integer reading, final long timestamp) {
         return sendMeasurement(uri, (double) reading, timestamp);
     }
 
     public Collection<String> sendMeasurement(final String uri, final Double reading, final long timestamp) {
-        final String deviceName = uri.split("/")[0];
-        if (uri.endsWith("skinresponse")) {
-            lastSkinResponseValue.put(deviceName, reading);
-        }
-//        if (lastSkinResponseValue.containsKey(deviceName) && lastSkinResponseValue.get(deviceName) > skinResponseThreshold) {
-            final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
-            log.info(String.format(DEBUG_SEND_FORMAT, lastSkinResponseValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
-            rabbitTemplate.send(rabbitQueueSend, rabbitQueueSend, new Message(message.getBytes(), new MessageProperties()));
-            return Collections.singletonList(uriPrefix + "-" + uri);
-//        } else {
-//            final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
-//            log.warn(String.format(DEBUG_NOT_SEND_FORMAT, lastSkinResponseValue.get(deviceName), rabbitQueueSend, rabbitQueueSend, message));
-//            return Collections.singletonList(uriPrefix + "-" + uri);
-//        }
+        outputCounter.increment();
+        
+        final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
+        log.info(String.format(DEBUG_SEND_FORMAT, rabbitQueueSend, rabbitQueueSend, message));
+        rabbitTemplate.send(rabbitQueueSend, rabbitQueueSend, new Message(message.getBytes(), new MessageProperties()));
+        return Collections.singletonList(uriPrefix + "-" + uri);
     }
 
     //RabbitMQ listener for commands from SPARKS
@@ -91,6 +109,8 @@ public class RabbitService {
     //RabbitMQ listener for data from IPN Mouse - data in format 1
     @RabbitListener(queues = QUEUE_DATA_V1, containerFactory = "serverB")
     public void receiveFromSmartWorkV1(final Message message) {
+        inputCounterV1.increment();
+        
         log.debug("[{}] routingKey:{} body:{}", QUEUE_DATA_V1, message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
         if (!isValidRoutingKeyV1(message.getMessageProperties().getReceivedRoutingKey())) {
             log.error("[{}] invalid routingKey:{}", QUEUE_DATA_V1, message.getMessageProperties().getReceivedRoutingKey());
@@ -133,6 +153,8 @@ public class RabbitService {
     //RabbitMQ listener for data from IPN Mouse - data in format 2
     @RabbitListener(queues = QUEUE_DATA_V2, containerFactory = "serverB")
     public void receiveFromSmartWorkV2(final Message message) {
+        inputCounterV2.increment();
+        
         log.debug("[{}] routingKey:{} body:{}", QUEUE_DATA_V2, message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
         if (!isValidRoutingKeyV2(message.getMessageProperties().getReceivedRoutingKey())) {
             log.error("[{}] invalid routingKey:{}", QUEUE_DATA_V2, message.getMessageProperties().getReceivedRoutingKey());
@@ -181,6 +203,8 @@ public class RabbitService {
     //RabbitMQ listener for data from IPN Mouse - data in format 3
     @RabbitListener(queues = QUEUE_DATA_V3, containerFactory = "serverB")
     public void receiveFromSmartWorkV3(final Message message) {
+        inputCounterV3.increment();
+    
         log.debug("[{}] routingKey:{} body:{}", QUEUE_DATA_V3, message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
         if (!isValidRoutingKeyV3(message.getMessageProperties().getReceivedRoutingKey())) {
             log.error("[{}] invalid routingKey:{}", QUEUE_DATA_V3, message.getMessageProperties().getReceivedRoutingKey());

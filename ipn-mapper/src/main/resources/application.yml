@@ -14,6 +14,25 @@ logging:
   level:
     net.sparkworks.common: DEBUG
 
+management:
+  health:
+    rabbit:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  server:
+    port: 5026
+  endpoint:
+    metrics:
+      enabled: true
+  metrics:
+    web:
+      server:
+        auto-time-requests: true
+        requests-metric-name: 'ipn-mapper.http.metrics'
+
 rabbitmq:
   queueCommands: "${rabbitmq.uriPrefix}-commands"
   queueSend: "${rabbitmq.uriPrefix}-send"
