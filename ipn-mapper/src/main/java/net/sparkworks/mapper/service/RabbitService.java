@@ -75,7 +75,7 @@ public class RabbitService {
     
     private final MeterRegistry meterRegistry;
     
-    private Counter inputCounterV1, inputCounterV2, inputCounterV3, outputCounter;
+    private Counter inputCounterV1, inputCounterV2, inputCounterV3, outputCounter, hostsCounter;
 
     private Set<String> hosts = new HashSet<>();
     
@@ -95,6 +95,9 @@ public class RabbitService {
                 .register(meterRegistry);
         outputCounter = Counter.builder("ipn-mapper.output.messages")
                 .description("Output messages")
+                .register(meterRegistry);
+        hostsCounter = Counter.builder("ipn-mapper.hosts.active")
+                .description("Active IPN mouse hosts reporting data")
                 .register(meterRegistry);
     }
 
@@ -378,6 +381,9 @@ public class RabbitService {
 
     @Scheduled(fixedRate = 60_000)
     public void reportHosts(){
+        //set counter to 0 and add current hosts
+        hostsCounter.increment(-hostsCounter.count());
+        hostsCounter.increment(hosts.size());
         log.info("Active Hosts[{}]: [{}]", hosts.size(), StringUtils.join(hosts, ","));
         hosts.clear();
     }
