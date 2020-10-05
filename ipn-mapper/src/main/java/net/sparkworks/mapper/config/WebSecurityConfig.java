@@ -19,14 +19,12 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
-                .authorizeRequests().
-                antMatchers("/**").authenticated()
+                .requestMatcher(EndpointRequest.toAnyEndpoint())
+                .authorizeRequests()
+                .antMatchers("/actuator/prometheus").permitAll()
+                .antMatchers("/**").authenticated()
                 .and()
                 .csrf().disable()
                 .httpBasic().disable();
-        http
-                .requestMatcher(EndpointRequest.toAnyEndpoint())
-                .authorizeRequests()
-                .anyRequest().permitAll();
     }
 }
