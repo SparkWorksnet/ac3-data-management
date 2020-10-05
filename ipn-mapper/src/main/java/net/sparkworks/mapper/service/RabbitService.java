@@ -172,8 +172,24 @@ public class RabbitService {
     //RabbitMQ listener for data from IPN Mouse - data in format 2
     @RabbitListener(queues = QUEUE_DATA_V2, containerFactory = "serverB")
     public void receiveFromSmartWorkV2(final Message message) {
-        inputCounterV2.increment();
+        try {
+            final MouseDataWrapper md = mapper.readValue(new String(message.getBody()), MouseDataWrapper.class);
+            log.debug("[{}] routingKey:{} body:{}", QUEUE_DATA_V3, message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
+            if (!isValidRoutingKeyV3(message.getMessageProperties().getReceivedRoutingKey())) {
+                log.error("[{}] invalid routingKey:{}", QUEUE_DATA_V3, message.getMessageProperties().getReceivedRoutingKey());
+            } else {
+                try {
+                    inputCounterV3.increment();
+                    sendReadingsV3(message);
+                } catch (Exception e) {
+                    log.error(e.getMessage(), e);
+                }
+            }
+            return;
+        } catch (Exception e) {
         
+        }
+    
         log.debug("[{}] routingKey:{} body:{}", QUEUE_DATA_V2, message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
         if (!isValidRoutingKeyV2(message.getMessageProperties().getReceivedRoutingKey())) {
             log.error("[{}] invalid routingKey:{}", QUEUE_DATA_V2, message.getMessageProperties().getReceivedRoutingKey());
@@ -183,6 +199,7 @@ public class RabbitService {
             return;
         }
         try {
+            inputCounterV2.increment();
             sendReadingsV2(message);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -223,13 +240,12 @@ public class RabbitService {
     //RabbitMQ listener for data from IPN Mouse - data in format 3
     @RabbitListener(queues = QUEUE_DATA_V3, containerFactory = "serverB")
     public void receiveFromSmartWorkV3(final Message message) {
-        inputCounterV3.increment();
-    
         log.debug("[{}] routingKey:{} body:{}", QUEUE_DATA_V3, message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
         if (!isValidRoutingKeyV3(message.getMessageProperties().getReceivedRoutingKey())) {
             log.error("[{}] invalid routingKey:{}", QUEUE_DATA_V3, message.getMessageProperties().getReceivedRoutingKey());
             return;
         } else {
+            inputCounterV3.increment();
             try {
                 sendReadingsV3(message);
             } catch (Exception e) {
