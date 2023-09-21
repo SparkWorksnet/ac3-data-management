@@ -4,33 +4,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.prometheus.client.CollectorRegistry;
-import io.prometheus.client.Gauge;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sparkworks.mapper.model.DoubleValueReading;
 import net.sparkworks.mapper.model.ImuValueReading;
 import net.sparkworks.mapper.model.SingleValueReading;
 import net.sparkworks.mapper.model.input.MouseDataWrapper;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -46,9 +36,9 @@ public class RabbitService {
     private static final String DEBUG_FORMAT = "to [%s,%s] %s";
     private static final String DEBUG_SEND_FORMAT = "Sending: " + DEBUG_FORMAT;
     private static final String DEBUG_NOT_SEND_FORMAT = "Will not process the following measurement: " + DEBUG_FORMAT;
-    private static final String QUEUE_DATA_V1 = "${rabbitmq.serverB.queueData}";
-    private static final String QUEUE_DATA_V2 = "${rabbitmq.serverB.queueData2}";
-    private static final String QUEUE_DATA_V3 = "${rabbitmq.serverB.queueData3}";
+    private static final String QUEUE_DATA_V1 = "${rabbitmq.queueData}";
+    private static final String QUEUE_DATA_V2 = "${rabbitmq.queueData2}";
+    private static final String QUEUE_DATA_V3 = "${rabbitmq.queueData3}";
     private static final String QUEUE_COMMAND = "${rabbitmq.queueCommands}";
 
     @Value("${mapper.skinresponse.threshold}")
@@ -60,7 +50,7 @@ public class RabbitService {
     private static final Set<String> SINGLE_VALUE_READING_DATA_TYPES = new HashSet<>(Arrays.asList("temperature", "skinresponse", "heartrate", "gripforce", "hesitation", "frustration", "neutral"));
 
     private static final Set<String> DOUBLE_VALUE_READING_DATA_TYPES = new HashSet<>(Collections.singletonList("mousepos"));
-    
+
     private static final Set<String> IMU_DATA_TYPE = new HashSet<>(Collections.singletonList("imu"));
 
     private static final Set<String> VALID_DATA_TYPES = Stream.of(SINGLE_VALUE_READING_DATA_TYPES, DOUBLE_VALUE_READING_DATA_TYPES, IMU_DATA_TYPE).flatMap(Set::stream).collect(Collectors.toSet());
@@ -74,35 +64,30 @@ public class RabbitService {
     private final RabbitTemplate rabbitTemplate;
 
     private final ResourceService resourceService;
-    
+
     private final MeterRegistry meterRegistry;
     private final CollectorRegistry collectorRegistry;
-    
-    private Counter inputCounterV1, inputCounterV2, inputCounterV3, outputCounter;
-    private Gauge hostsCounter;
 
-    private Set<String> hosts = new HashSet<>();
-    
+    private Counter inputCounterV1, inputCounterV2, inputCounterV3, outputCounter;
+
+
     @PostConstruct
-    public void init(){
-        inputCounterV1 = Counter.builder("ipnmapper.input.messages")
+    public void init() {
+        inputCounterV1 = Counter.builder("mapper.input.messages")
                 .tag("format", "1")
                 .description("format 1 input messages")
                 .register(meterRegistry);
-        inputCounterV2 = Counter.builder("ipnmapper.input.messages")
+        inputCounterV2 = Counter.builder("mapper.input.messages")
                 .tag("format", "2")
                 .description("format 2 input messages")
                 .register(meterRegistry);
-        inputCounterV3 = Counter.builder("ipnmapper.input.messages")
+        inputCounterV3 = Counter.builder("mapper.input.messages")
                 .tag("format", "3")
                 .description("format 3 input messages")
                 .register(meterRegistry);
-        outputCounter = Counter.builder("ipnmapper.output.messages")
+        outputCounter = Counter.builder("mapper.output.messages")
                 .description("Output messages")
                 .register(meterRegistry);
-        
-        hostsCounter = Gauge.build("ipnmapper_hosts_active","Active IPN mouse hosts reporting data").create();
-        hostsCounter.register(collectorRegistry);
     }
 
     public Collection<String> sendMeasurement(final String uri, final Integer reading, final long timestamp) {
@@ -111,7 +96,7 @@ public class RabbitService {
 
     public Collection<String> sendMeasurement(final String uri, final Double reading, final long timestamp) {
         outputCounter.increment();
-        
+
         final String message = String.format(MESSAGE_TEMPLATE, uriPrefix + "-" + uri, reading, timestamp);
         log.debug(String.format(DEBUG_SEND_FORMAT, rabbitQueueSend, rabbitQueueSend, message));
         rabbitTemplate.send(rabbitQueueSend, rabbitQueueSend, new Message(message.getBytes(), new MessageProperties()));
@@ -125,10 +110,10 @@ public class RabbitService {
     }
 
     //RabbitMQ listener for data from IPN Mouse - data in format 1
-    @RabbitListener(queues = QUEUE_DATA_V1, containerFactory = "serverB")
+    @RabbitListener(queues = QUEUE_DATA_V1)
     public void receiveFromSmartWorkV1(final Message message) {
         inputCounterV1.increment();
-        
+
         log.debug("[{}] routingKey:{} body:{}", QUEUE_DATA_V1, message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
         if (!isValidRoutingKeyV1(message.getMessageProperties().getReceivedRoutingKey())) {
             log.error("[{}] invalid routingKey:{}", QUEUE_DATA_V1, message.getMessageProperties().getReceivedRoutingKey());
@@ -165,12 +150,11 @@ public class RabbitService {
         final String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
         final String dataType = splitRoutingKey[1];
         final String baseUri = splitRoutingKey[0] + "/" + splitRoutingKey[1];
-        registerHost(splitRoutingKey[0]);
         sendReadings(dataType, baseUri, message);
     }
 
     //RabbitMQ listener for data from IPN Mouse - data in format 2
-    @RabbitListener(queues = QUEUE_DATA_V2, containerFactory = "serverB")
+    @RabbitListener(queues = QUEUE_DATA_V2)
     public void receiveFromSmartWorkV2(final Message message) {
         try {
             final MouseDataWrapper md = mapper.readValue(new String(message.getBody()), MouseDataWrapper.class);
@@ -187,9 +171,9 @@ public class RabbitService {
             }
             return;
         } catch (Exception e) {
-        
+
         }
-    
+
         log.debug("[{}] routingKey:{} body:{}", QUEUE_DATA_V2, message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
         if (!isValidRoutingKeyV2(message.getMessageProperties().getReceivedRoutingKey())) {
             log.error("[{}] invalid routingKey:{}", QUEUE_DATA_V2, message.getMessageProperties().getReceivedRoutingKey());
@@ -227,7 +211,6 @@ public class RabbitService {
         final String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
         final String dataType = splitRoutingKey[2];
         final String baseUri = splitRoutingKey[0] + "/" + splitRoutingKey[2];
-        registerHost(splitRoutingKey[0]);
         Collection<String> systemNames = sendReadings(dataType, baseUri, message);
         try {
             final UUID groupUuid = UUID.fromString(splitRoutingKey[1]);
@@ -236,9 +219,9 @@ public class RabbitService {
             log.error(e.getMessage(), e);
         }
     }
-    
+
     //RabbitMQ listener for data from IPN Mouse - data in format 3
-    @RabbitListener(queues = QUEUE_DATA_V3, containerFactory = "serverB")
+    @RabbitListener(queues = QUEUE_DATA_V3)
     public void receiveFromSmartWorkV3(final Message message) {
         log.debug("[{}] routingKey:{} body:{}", QUEUE_DATA_V3, message.getMessageProperties().getReceivedRoutingKey(), new String(message.getBody()));
         if (!isValidRoutingKeyV3(message.getMessageProperties().getReceivedRoutingKey())) {
@@ -254,7 +237,7 @@ public class RabbitService {
             return;
         }
     }
-    
+
     private boolean isValidRoutingKeyV3(final String routingKey) {
         String[] splitRoutingKey = routingKey.split("\\.");
         if (splitRoutingKey.length < 2) {
@@ -263,11 +246,10 @@ public class RabbitService {
         }
         return true;
     }
-    
+
     private void sendReadingsV3(final Message message) throws IOException, IllegalAccessException {
         final String[] splitRoutingKey = message.getMessageProperties().getReceivedRoutingKey().split("\\.");
         final String baseUri = splitRoutingKey[0];
-        registerHost(splitRoutingKey[0]);
         Collection<String> systemNames = sendReadings3(baseUri, message);
         try {
             final UUID groupUuid = UUID.fromString(splitRoutingKey[1]);
@@ -303,9 +285,9 @@ public class RabbitService {
             return Collections.emptySet();
         }
     }
-    
+
     private Collection<String> sendReadings3(final String baseUri, final Message message) throws IllegalAccessException, IOException {
-        
+
         final MouseDataWrapper md = mapper.readValue(new String(message.getBody()),
                 MouseDataWrapper.class);
         log.debug("[{}] body:{}", QUEUE_DATA_V3, md);
@@ -316,30 +298,30 @@ public class RabbitService {
         keys.addAll(sendPreparedReading(baseUri + "/frustration", md.getUserData().getFrustration(), md.getMouseData().getTimestamp()));
         keys.addAll(sendPreparedReading(baseUri + "/hesitation", md.getUserData().getHesitation(), md.getMouseData().getTimestamp()));
         keys.addAll(sendPreparedReading(baseUri + "/neutral", md.getUserData().getNeutral(), md.getMouseData().getTimestamp()));
-    
+
         keys.addAll(sendPreparedReading(baseUri + "/gripforce", md.getMouseData().getGripForce(), md.getMouseData().getTimestamp()));
         keys.addAll(sendPreparedReading(baseUri + "/heartrate", md.getMouseData().getHeartRate(), md.getMouseData().getTimestamp()));
         keys.addAll(sendPreparedReading(baseUri + "/skinresponse", md.getMouseData().getSkinResponse(), md.getMouseData().getTimestamp()));
         keys.addAll(sendPreparedReading(baseUri + "/temperature", md.getMouseData().getTemperature(), md.getMouseData().getTimestamp()));
-    
+
         keys.addAll(sendPreparedReading(baseUri + "/imu/acelX", md.getMouseData().getImu().getAcelX(), md.getMouseData().getTimestamp()));
         keys.addAll(sendPreparedReading(baseUri + "/imu/acelY", md.getMouseData().getImu().getAcelY(), md.getMouseData().getTimestamp()));
         keys.addAll(sendPreparedReading(baseUri + "/imu/acelZ", md.getMouseData().getImu().getAcelZ(), md.getMouseData().getTimestamp()));
         keys.addAll(sendPreparedReading(baseUri + "/imu/gyroX", md.getMouseData().getImu().getGyroX(), md.getMouseData().getTimestamp()));
         keys.addAll(sendPreparedReading(baseUri + "/imu/gyroY", md.getMouseData().getImu().getGyroY(), md.getMouseData().getTimestamp()));
         keys.addAll(sendPreparedReading(baseUri + "/imu/gyroZ", md.getMouseData().getImu().getGyroZ(), md.getMouseData().getTimestamp()));
-    
+
         keys.addAll(sendPreparedReading(baseUri + "/mousepos/x", md.getMouseData().getPosition().getX(), md.getMouseData().getTimestamp()));
         keys.addAll(sendPreparedReading(baseUri + "/mousepos/y", md.getMouseData().getPosition().getY(), md.getMouseData().getTimestamp()));
-        
+
         return keys;
     }
-    
+
     private Collection<String> sendPreparedReading(final String baseUri, final Double reading, final Long timestamp) throws IllegalAccessException {
         long epochTime = timestamp - TICKS_AT_EPOCH;
         return sendMeasurement(baseUri, reading, epochTime);
     }
-    
+
     private Collection<String> sendSingleValueReading(final String baseUri, final Message message) throws IllegalAccessException, IOException {
         final SingleValueReading singleValueReading = mapper.readValue(message.getBody(), SingleValueReading.class);
         long epochTime = singleValueReading.getTimestamp() - TICKS_AT_EPOCH;
@@ -399,15 +381,4 @@ public class RabbitService {
         return false;
     }
 
-    @Scheduled(fixedRate = 60_000)
-    public void reportHosts(){
-        //set counter to 0 and add current hosts
-        hostsCounter.set(hosts.size());
-        log.info("Active Hosts[{}]: [{}]", hosts.size(), StringUtils.join(hosts, ","));
-        hosts.clear();
-    }
-    
-    private void registerHost(final String host) {
-        hosts.add(host);
-    }
 }

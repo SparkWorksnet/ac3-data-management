@@ -11,16 +11,16 @@
         <version>2.3.4-SNAPSHOT</version>
     </parent>
 
-    <groupId>net.sparkworks.smartwork</groupId>
-    <artifactId>ipn-mapper-parent</artifactId>
+    <groupId>net.sparkworks.engine</groupId>
+    <artifactId>mapper-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
     <packaging>pom</packaging>
-    <name>SparkWorks :: Smartwork</name>
+    <name>SparkWorks :: IoTEngine</name>
     <inceptionYear>2018</inceptionYear>
 
     <modules>
-        <module>ipn-mapper</module>
+        <module>mapper</module>
     </modules>
 
     <repositories>

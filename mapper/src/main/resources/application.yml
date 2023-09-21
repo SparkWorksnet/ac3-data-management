@@ -7,10 +7,6 @@ spring.rabbitmq.host: ${rabbitmq.server}
 spring.rabbitmq.port: ${rabbitmq.port}
 spring.rabbitmq.username: ${rabbitmq.username}
 spring.rabbitmq.password: ${rabbitmq.password}
-spring.multirabbitmq.serverB.host: ${rabbitmq.serverB.host}
-spring.multirabbitmq.serverB.port: ${rabbitmq.serverB.port}
-spring.multirabbitmq.serverB.username: ${rabbitmq.serverB.username}
-spring.multirabbitmq.serverB.password: ${rabbitmq.serverB.password}
 
 logging:
   level:
@@ -32,16 +28,17 @@ management:
   metrics:
     web:
       server:
-        auto-time-requests: true
-        requests-metric-name: 'ipnmapper.http.metrics'
+        request:
+          autotime:
+            enabled: true
+          metric-name: 'mapper.http.metrics'
 
 rabbitmq:
   queueCommands: "${rabbitmq.uriPrefix}-commands"
   queueSend: "${rabbitmq.uriPrefix}-send"
-  serverB:
-    queueData: ipn-mouse-data-sparks
-    queueData2: ipn-mouse-data-sparks2
-    queueData3: ipn-mouse-data-sparks3
+  queueData: data-sparks
+  queueData2: data-sparks2
+  queueData3: data-sparks3
 
 mapper:
   skinresponse:
