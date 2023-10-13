@@ -1,0 +1,23 @@
+services:
+  edgebroker:
+    build:
+      context: ./
+      dockerfile: rabbit/Dockerfile
+    volumes:
+      - BROKER_DATA:/var/lib/rabbitmq/
+    environment:
+      - RABBITMQ_HIPE_COMPILE=1
+    ports:
+      - 5672:5672
+      - 15672:15672
+      - 15674:15674
+      - 5552:5552
+    networks:
+      - ac3
+networks:
+  ac3:
+    external: true
+
+volumes:
+  BROKER_DATA:
+
