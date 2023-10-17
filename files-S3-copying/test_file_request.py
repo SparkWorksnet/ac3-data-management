@@ -13,7 +13,7 @@ message_data = {
     'source_bucket': 'ac3-filestore-1',
     'source_file': 'final_cube_LR-V.fits',
     'destination_bucket': 'ac3-filestore-2',
-    'destination_file': 'cube.fits'
+    'destination_file': 'test/cube-1.fits'
 }
 message_body = json.dumps(message_data)
 
