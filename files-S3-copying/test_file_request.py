@@ -1,12 +1,15 @@
+import os
 import pika
 import json
 
 # RabbitMQ setup
-credentials = pika.PlainCredentials("user", "password")
-connection_parameters = pika.ConnectionParameters(
-    host='127.0.0.1', port=5672, virtual_host="/", credentials=credentials, heartbeat=30)
+credentials = pika.PlainCredentials(os.getenv('BROKER_USERNAME'), os.getenv('BROKER_PASSWORD'))
+connection_parameters = pika.ConnectionParameters(host=os.getenv('BROKER_HOST'), port=int(os.getenv('BROKER_PORT')),
+                                                  virtual_host=os.getenv('BROKER_VHOST', '/'),
+                                                  credentials=credentials)
 connection = pika.BlockingConnection(connection_parameters)
 channel = connection.channel()
+exchange_name = os.getenv('BROKER_EXCHANGE')
 
 # Message
 message_data = {
@@ -17,8 +20,8 @@ message_data = {
 }
 message_body = json.dumps(message_data)
 
-routing_key = '#'
-channel.basic_publish(exchange='uc3-data', routing_key=routing_key, body=message_body)
+routing_key = exchange_name
+channel.basic_publish(exchange=exchange_name, routing_key=routing_key, body=message_body)
 
 print(" [x] Message data sent: " + message_body)
 

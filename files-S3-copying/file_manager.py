@@ -7,12 +7,14 @@ import os
 
 def main():
     # RabbitMQ setup
-    credentials = pika.PlainCredentials("user", "password")
-    connection_parameters = pika.ConnectionParameters(
-        host='127.0.0.1', port=5672, virtual_host="/", credentials=credentials, heartbeat=30)
+    credentials = pika.PlainCredentials(os.getenv('BROKER_USERNAME'), os.getenv('BROKER_PASSWORD'))
+    connection_parameters = pika.ConnectionParameters(host=os.getenv('BROKER_HOST'), port=int(os.getenv('BROKER_PORT')),
+                                                      virtual_host=os.getenv('BROKER_VHOST', '/'),
+                                                      credentials=credentials)
     connection = pika.BlockingConnection(connection_parameters)
     channel = connection.channel()
-    channel.basic_consume(queue='uc3-data', on_message_callback=callback, auto_ack=True)
+    queue_name = os.getenv('BROKER_QUEUE')
+    channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
     print(' [*] Waiting for messages.')
     channel.start_consuming()
 
@@ -41,6 +43,7 @@ def callback(ch, method, properties, body):
 if __name__ == '__main__':
     try:
         main()
+        print('started main!')
     except KeyboardInterrupt:
         print('Interrupted')
         try:
