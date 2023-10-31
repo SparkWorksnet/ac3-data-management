@@ -57,15 +57,14 @@
     };
 
     // Stomp.js boilerplate
-    var client = Stomp.client('ws://' + window.location.hostname + ':15674/ws');
+    var client = Stomp.client('ws://ac301.local:15674/ws');
     client.debug = pipe('#second');
 
     var print_first = pipe('#first', function (data) {
         client.send('/queue/data', {"content-type": "text/plain"}, data);
     });
     var on_connect = function (x) {
-        // id = client.subscribe("/topic/test", function(d) {
-        id = client.subscribe("/queue/data", function (d) {
+        id = client.subscribe("/amq/queue/uc1-data-ws", function (d) {
             print_first(d.body);
         });
     };

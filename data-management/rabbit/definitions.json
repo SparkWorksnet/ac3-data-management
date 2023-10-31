@@ -106,11 +106,36 @@
       "arguments": {}
     },
     {
+      "name": "uc1-data",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "uc1-data-ws",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl":5000
+      }
+    },
+    {
       "name": "uc3-data",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
       "arguments": {}
+    },
+    {
+      "name": "uc3-data-ws",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl":5000
+      }
     },
     {
       "name": "uc3-data-result",
@@ -145,9 +170,33 @@
       "arguments": {}
     },
     {
+      "source": "forwarder1",
+      "vhost": "/",
+      "destination": "uc1-data",
+      "destination_type": "queue",
+      "routing_key": "#",
+      "arguments": {}
+    },
+    {
+      "source": "forwarder1",
+      "vhost": "/",
+      "destination": "uc1-data-ws",
+      "destination_type": "queue",
+      "routing_key": "#",
+      "arguments": {}
+    },
+    {
       "source": "uc3-data",
       "vhost": "/",
       "destination": "uc3-data",
+      "destination_type": "queue",
+      "routing_key": "#",
+      "arguments": {}
+    },
+    {
+      "source": "uc3-data",
+      "vhost": "/",
+      "destination": "uc3-data-ws",
       "destination_type": "queue",
       "routing_key": "#",
       "arguments": {}
