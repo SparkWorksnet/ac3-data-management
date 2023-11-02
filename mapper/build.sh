@@ -1,3 +1,1 @@
-#!/usr/bin/env bash
-docker build --build-arg JAR_FILE=./target/mapper-1.0-SNAPSHOT.jar -t mapper:1.0 .
-
+docker buildx build --platform linux/arm/v7,linux/arm64/v8 . -f Dockerfile -t sparkworks/sw-mapper-ac3:0.1 --push

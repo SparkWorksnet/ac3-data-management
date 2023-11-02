@@ -1,18 +1,14 @@
 rabbitmq:
-  server: "${SPARKS_RABBIT_HOST}"
-  port: "${SPARKS_RABBIT_PORT}"
-  username: "${MAPPER_CLIENT_ID}"
-  password: ${smartwork_MAPPER_client_secret}
+  server: "${RABBITMQ_HOST}"
+  port: "${RABBITMQ_PORT}"
+  username: "${RABBITMQ_USERNAME}"
+  password: ${RABBITMQ_PASSWORD}
   uriPrefix: "ac3-data"
+  queue:
+    commands: "${QUEUE_COMMANDS}"
+    output: "${QUEUE_OUT}"
+    input: "${QUEUE_IN}"
 
-sparks:
-  cargo:
-    oauth2:
-      client:
-        clientId: ${MAPPER_CL}
-        clientSecret: ${MAPPER_CS}
-        username: ${MAPPER_USERNAME}
-        password: ${MAPPER_PASSWORD}
 logging:
   level:
     net.sparkworks.common: ERROR

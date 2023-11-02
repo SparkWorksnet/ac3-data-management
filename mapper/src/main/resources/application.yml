@@ -34,20 +34,11 @@ management:
           metric-name: 'mapper.http.metrics'
 
 rabbitmq:
-  queueCommands: "${rabbitmq.uriPrefix}-commands"
-  queueSend: "${rabbitmq.uriPrefix}-send"
-  queueData: data-sparks
-  queueData2: data-sparks2
-  queueData3: data-sparks3
+  queue:
+    commands: "${QUEUE_COMMANDS}"
+    output: "${QUEUE_OUT}"
+    input: "${QUEUE_IN}"
 
 mapper:
   skinresponse:
     threshold: 5
-
-sparks:
-  cargo:
-    address: https://api.sparkworks.net
-    internal: false
-    oauth2:
-      client:
-        accessTokenUrl: "https://sso.sparkworks.net/aa/oauth/token"
