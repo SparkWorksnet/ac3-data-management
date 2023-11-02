@@ -21,6 +21,33 @@
         <p class="lead">description</p>
     </div>
     <div class="row">
+        <div class="offset-4 col-8">
+            <form class="row row-cols-lg-auto text-right pull-right">
+                <div class="col-12 pull-right">
+                    <label class="visually-hidden" for="username">Username</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="username" placeholder="Username">
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="visually-hidden" for="password">Password</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="password" placeholder="Password">
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <button onclick="connect(); return false;" class="btn btn-primary">Connect</button>
+                </div>
+
+                <div class="col-12">
+                    <label id="connectionStatus"></label>
+                </div>
+            </form>
+        </div>
+    </div>
+    <br/>
+    <div class="row">
 
         <div id="first" class="col-md-12 box">
             <h2>Received</h2>
@@ -56,22 +83,27 @@
         return print;
     };
 
-    // Stomp.js boilerplate
-    var client = Stomp.client('ws://ac301.local:15674/ws');
-    client.debug = pipe('#second');
+    function connect() {
 
-    var print_first = pipe('#first', function (data) {
-        client.send('/queue/data', {"content-type": "text/plain"}, data);
-    });
-    var on_connect = function (x) {
-        id = client.subscribe("/amq/queue/uc1-data-ws", function (d) {
-            print_first(d.body);
+        // Stomp.js boilerplate
+        let client = Stomp.client('ws://ac302.local:15674/ws');
+        client.debug = pipe('#second');
+
+        var print_first = pipe('#first', function (data) {
+            client.send('/queue/data', {"content-type": "text/plain"}, data);
         });
-    };
-    var on_error = function () {
-        console.log('error');
-    };
-    client.connect('user', 'password', on_connect, on_error, '/');
+        var on_connect = function (x) {
+            id = client.subscribe("/amq/queue/uc1-data-ws", function (d) {
+                print_first(d.body);
+            });
+            $("#connectionStatus").text("Connected!");
+        };
+        var on_error = function () {
+            console.log('error');
+        };
+        client.connect($("#username").val(), $('#password').val(), on_connect, on_error, '/');
+    }
+
 
     $('#first input').focus(function () {
         if (!has_had_focus) {
