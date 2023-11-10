@@ -31,14 +31,14 @@ def callback(ch, method, properties, body_compressed):
 
 def main():
     credentials = pika.PlainCredentials(os.getenv('BROKER_USERNAME'), os.getenv('BROKER_PASSWORD'))
-    connection_parameters = pika.ConnectionParameters(host=os.getenv('BROKER_HOST'), port=int(os.getenv('BROKER_PORT')),
+    connection_parameters = pika.ConnectionParameters(host=os.getenv('BROKER_HOST'), port=os.getenv('BROKER_PORT'),
                                                       virtual_host=os.getenv('BROKER_VHOST', '/'),
                                                       credentials=credentials)
     connection = pika.BlockingConnection(connection_parameters)
     channel = connection.channel()
     queue_name = os.getenv('BROKER_QUEUE')
+
     channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
-    print(' [*] Waiting for messages.')
     channel.start_consuming()
 
 
