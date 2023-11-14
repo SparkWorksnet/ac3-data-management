@@ -15,6 +15,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -54,9 +57,23 @@ public class RabbitService {
     public Collection<String> sendMeasurement(final String uri, final Double reading, final long timestamp) {
         outputCounter.increment();
         final String message = String.format(MESSAGE_TEMPLATE, uri, reading, timestamp);
+
+        try {
+            write2file(message);
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+
         log.debug(String.format(DEBUG_SEND_FORMAT, rabbitQueueOutput, rabbitQueueOutput, message));
         rabbitTemplate.send(rabbitQueueOutput, rabbitQueueOutput, new Message(message.getBytes(), new MessageProperties()));
         return Collections.singletonList(uri);
+    }
+
+    private void write2file(final String message) throws IOException {
+        final File file = new File("/srv/data.csv");
+        final FileWriter fr = new FileWriter(file, true);
+        fr.write(message + "\n");
+        fr.close();
     }
 
     //RabbitMQ listener for commands from SPARKS
