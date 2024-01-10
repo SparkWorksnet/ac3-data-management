@@ -89,7 +89,7 @@ public class RabbitService {
         try {
             final EnvMessage envMessage = mapper.readValue(new String(message.getBody()), EnvMessage.class);
             log.info("[{}] parsedMessage: {}", QUEUE_INPUT, envMessage);
-            final String baseUri = message.getMessageProperties().getReceivedRoutingKey() + envMessage.getSensorid();
+            final String baseUri = message.getMessageProperties().getReceivedRoutingKey();
             extractAndSendReadings(baseUri, envMessage);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
