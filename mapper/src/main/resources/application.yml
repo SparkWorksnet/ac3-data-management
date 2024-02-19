@@ -1,0 +1,44 @@
+server:
+  port: 8026
+
+spring.main.allow-bean-definition-overriding: true
+
+spring.rabbitmq.host: ${rabbitmq.server}
+spring.rabbitmq.port: ${rabbitmq.port}
+spring.rabbitmq.username: ${rabbitmq.username}
+spring.rabbitmq.password: ${rabbitmq.password}
+
+logging:
+  level:
+    net.sparkworks.common: DEBUG
+
+management:
+  health:
+    rabbit:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  server:
+    port: 5026
+  endpoint:
+    metrics:
+      enabled: true
+  metrics:
+    web:
+      server:
+        request:
+          autotime:
+            enabled: true
+          metric-name: 'mapper.http.metrics'
+
+rabbitmq:
+  queue:
+    commands: "${QUEUE_COMMANDS}"
+    output: "${QUEUE_OUT}"
+    input: "${QUEUE_IN}"
+
+mapper:
+  skinresponse:
+    threshold: 5

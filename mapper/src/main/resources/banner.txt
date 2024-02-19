@@ -1,0 +1,8 @@
+ __  __
+|  \/  | __ _ _ __  _ __   ___ _ __
+| |\/| |/ _` | '_ \| '_ \ / _ \ '__|
+| |  | | (_| | |_) | |_) |  __/ |
+|_|  |_|\__,_| .__/| .__/ \___|_|
+                               |_|   |_|
+Spring Boot   : ${spring-boot.formatted-version}
+Active profile: ${spring.profiles.active}

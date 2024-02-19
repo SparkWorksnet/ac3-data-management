@@ -92,3 +92,5 @@ hs_err_pid*
 *.template
 *.dat
 *.env
+
+mapper/src/main/resources/application.properties
