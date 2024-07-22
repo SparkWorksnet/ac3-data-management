@@ -1,0 +1,63 @@
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dc:     <http://purl.org/dc/elements/1.1/> .
+@prefix foaf:   <http://xmlns.com/foaf/0.1/> .
+@prefix locn:   <http://www.w3.org/ns/locn#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <http://schema.org/> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix time:   <http://www.w3.org/2006/time> .
+@prefix vcard:  <http://www.w3.org/2006/vcard/ns#> .
+@prefix xml:    <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix edp:    <https://europeandataportal.eu/voc#> .
+
+<https://example.com/id1>
+    a                 dcat:Dataset ;
+    dct:title         "UC1 - Single Device Sample Dataset"@en ;
+    dct:language      <http://publications.europa.eu/resource/authority/language/ENG> ;
+    dct:description   "This is a sample Dataset from a single device of the UC1 deployment" ;
+    dcat:theme        <http://publications.europa.eu/resource/authority/data-theme/ENVI> ;
+    dct:issued        "2024-07-18T00:00:00"^^xsd:dateTime ;
+    dct:modified      "2024-07-18T00:00:00"^^xsd:dateTime ;
+    dct:accessRights  ":public" ;
+    dcat:landingPage  <https://ac3-project.eu> ;
+    dct:temporal      [ a                dct:PeriodOfTime ;
+                        schema:startDate "2024-06-13T12:36:00"^^xsd:dateTime ;
+                        schema:endDate   "2024-07-09T11:02:00"^^xsd:dateTime ] ;
+    dcat:contactPoint [ a              vcard:Kind ;
+                        vcard:hasEmail <mailto:j.ojeda@iquadrat.com> ;
+                        vcard:fn       "Jhofre Ojeda" ] ;
+    dcat:contactPoint <https://ac3-project.eu/contact-us> ;
+    dcat:keyword      "ac3", "uc1", "environmental", "co2" ;
+    dct:provenance    [ a          dct:ProvenanceStatement ;
+                        rdfs:label "This is data generated during the testing of the UC1 of the AC3 project"@en ] ;
+    dcat:distribution [ a              dcat:Distribution ;
+                        dct:language   <http://publications.europa.eu/resource/authority/language/ENG> ;
+                        dcat:accessURL <http://daten.transparenz.hamburg.de/Dataport.HmbTG.ZS.Webservice.GetRessource100/GetRessource100.svc/4fbc1cdb-7d27-4f45-ba6a-95b94fa63832/Sediment.csv> ;
+                        dct:license    <https://creativecommons.org/publicdomain/zero/1.0/deed.sv> ;
+                        dct:format     <http://publications.europa.eu/resource/authority/file-type/CSV> ;
+                        dcat:mediaType <https://www.iana.org/assignments/media-types/text/csv> .
+
+dct:title
+
+        "Sensor Data Distribution" ;
+        dct:description "This is the data from a single sensor over the course of many days between June and July 2024."
+    ] .
+
+<https://www.iana.org/assignments/media-types/text/csv>
+    a              skos:Concept, dct:MediaType ;
+    skos:inScheme  <https://www.iana.org/assignments/media-types> ;
+    skos:prefLabel "text/csv"@de, "text/csv"@fr, "text/csv"@en, "text/csv"@nl .
+
+<http://publications.europa.eu/resource/authority/file-type/CSV>
+    a              skos:Concept, dct:MediaTypeOrExtent ;
+    skos:inScheme  <http://publications.europa.eu/resource/authority/file-type> ;
+    skos:prefLabel "CSV"@nl, "CSV"@en, "CSV"@fr, "CSV"@de, "CSV" .
+
+<https://example.de/def/publisher/fokus>
+    a             foaf:Organization ;
+    foaf:homepage "https://www.iquadrat.com/en/" ;
+    foaf:name     "Iquadrat Informatica S.L." .
