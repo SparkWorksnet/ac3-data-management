@@ -14,7 +14,7 @@ PREFIX ac3:    <https://ac3-project.eu/#>
     dct:title               "Streaming IoT Connector" ;
     schema:name             "streaming-connector" ;
     schema:description      "This is an edc connector for streaming iot data" ;
-    ac3:image               "ac3-connector-http-http-consumer:latest" ;
+    ac3:image               "sparkworks/ac3-connector-http-http-consumer:latest" ;
     ac3:EnvironmentVariable "WEB_BASE_URL=http://192.168.1.215" ;
     ac3:EnvironmentVariable "WEB_HTTP_PORT=28180" ;
     ac3:EnvironmentVariable "WEB_HTTP_MANAGEMENT_PORT=28181" ;
