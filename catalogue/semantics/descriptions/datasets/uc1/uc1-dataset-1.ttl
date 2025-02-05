@@ -1,0 +1,15 @@
+PREFIX dcat:   <http://www.w3.org/ns/dcat#>
+PREFIX dct:    <http://purl.org/dc/terms/>
+PREFIX gx:     <https://w3id.org/gaia-x/development#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX schema: <https://schema.org/>
+
+<https://piveau.ac3-project.eu/set/resource/dataset/2befff01-885e-4e5d-a216-e2354baae959>
+    rdf:type                 gx:Dataset ;
+    dct:title                "UC1 Dataset 1"@en ;
+    schema:name              "IQU UC1 IoT Data 1" ;
+    schema:description       "This is one dataset for the UC1 datasource." ;
+    gx:license               "BSD-3-Clause" ;
+    dcat:assetId             "uc1-stream" ;
+    dcat:endpointDescription "dspaceconnector" ;
+    dcat:endpointURL         "http://ionos-s1.sparkworks.net:18182/protocol" .
