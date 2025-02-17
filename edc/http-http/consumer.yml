@@ -1,0 +1,21 @@
+version: '3'
+services:
+  consumer:
+    image: sparkworks/ac3-connector-http-http-consumer:latest
+    ports:
+      - "28180:28180"
+      - "28181:28181"
+      - "28182:28182"
+      - "28183:28183"
+    environment:
+      - WEB_BASE_URL=http://192.168.1.10
+      - WEB_HTTP_PORT=28180
+      - WEB_HTTP_MANAGEMENT_PORT=28181
+      - WEB_HTTP_PROTOCOL_PORT=28182
+      - WEB_HTTP_CONTROL_PORT=28183
+  logger:
+    image: sparkworks/ac3-http-request-logger:latest
+    ports:
+      - "4000:4000"
+    environment:
+      - HTTP_SERVER_PORT=4000

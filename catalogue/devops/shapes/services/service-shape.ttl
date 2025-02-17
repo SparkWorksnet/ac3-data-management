@@ -1,0 +1,77 @@
+PREFIX piveau: <https://piveau.eu/ns/voc#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX shacl:  <http://www.w3.org/ns/shacl#>
+PREFIX skos:   <http://www.w3.org/2004/02/skos/core#>
+PREFIX schema: <https://schema.org/>
+PREFIX dct:    <http://purl.org/dc/terms/>
+PREFIX gx:     <https://w3id.org/gaia-x/development#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX ac3:    <https://ac3-project.eu/#>
+
+ac3:ServiceShape
+    rdf:type                shacl:NodeShape ;
+    shacl:ignoredProperties ( rdf:type ) ;
+    shacl:property          [ shacl:maxCount      1 ;
+                              piveau:mappingClass "StandardText" ;
+                              piveau:mappingName  "id" ] ;
+    shacl:property          [ shacl:datatype      xsd:string ;
+                              shacl:description   "A human readable title of the entity." ;
+                              shacl:maxCount      1 ;
+                              shacl:name          "Title" ;
+                              shacl:order         1 ;
+                              shacl:path          dct:title ;
+                              piveau:mappingClass "StandardText" ;
+                              piveau:mappingName  "title" ] ;
+    shacl:property          [ shacl:datatype      xsd:string ;
+                              shacl:description   "A human readable name of the entity."@en ;
+                              shacl:maxCount      1 ;
+                              shacl:minCount      1 ;
+                              shacl:name          "Name"@en ;
+                              shacl:order         2 ;
+                              shacl:path          schema:name ;
+                              piveau:mappingClass "StandardText" ;
+                              piveau:mappingName  "name" ] ;
+    shacl:property          [ shacl:datatype      xsd:string ;
+                              shacl:description   "A free text description of the entity."@en ;
+                              shacl:maxCount      1 ;
+                              shacl:name          "Description"@en ;
+                              shacl:order         3 ;
+                              shacl:path          schema:description ;
+                              piveau:mappingClass "StandardText" ;
+                              piveau:mappingName  "description" ] ;
+    shacl:property          [ shacl:datatype      xsd:string ;
+                              shacl:description   "The service's image."@en ;
+                              shacl:maxCount      1 ;
+                              shacl:name          "Image"@en ;
+                              shacl:order         4 ;
+                              shacl:path          ac3:image ;
+                              piveau:mappingClass "StandardText" ;
+                              piveau:mappingName  "image" ] ;
+    shacl:property          [ shacl:datatype      xsd:string ;
+                              shacl:description   "The service's image."@en ;
+                              shacl:maxCount      1 ;
+                              shacl:name          "Image"@en ;
+                              shacl:order         5 ;
+                              shacl:path          ac3:image ;
+                              piveau:mappingClass "StandardText" ;
+                              piveau:mappingName  "image" ] ;
+    shacl:property          [ shacl:datatype    xsd:string ;
+                              shacl:description "The service's env variables."@en ;
+                              shacl:minCount    0 ;
+                              shacl:order       6 ;
+                              shacl:pattern     "^[A-Za-z_][A-Za-z0-9_]*=.+$" ;
+                              shacl:path        ac3:EnvironmentVariable ] ;
+    shacl:property          [ shacl:datatype    xsd:string ;
+                              shacl:description "The service's exposed ports."@en ;
+                              shacl:minCount    0 ;
+                              shacl:order       7 ;
+                              shacl:pattern     "^[0-9]+:[0-9]+$" ;
+                              shacl:path        ac3:ExposedPort ] ;
+    shacl:property          [ shacl:datatype    xsd:string ;
+                              shacl:description "The service's exposed ports."@en ;
+                              shacl:minCount    0 ;
+                              shacl:order       8 ;
+                              shacl:path        ac3:volumes ] ;
+    shacl:targetClass       gx:ServiceOffering .
+
+

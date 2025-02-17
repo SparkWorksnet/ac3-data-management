@@ -1,0 +1,26 @@
+PREFIX piveau: <https://piveau.eu/ns/voc#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX shacl:  <http://www.w3.org/ns/shacl#>
+PREFIX skos:   <http://www.w3.org/2004/02/skos/core#>
+PREFIX dct:    <http://purl.org/dc/terms/>
+PREFIX dcat:   <http://www.w3.org/ns/dcat#>
+PREFIX schema: <https://schema.org/>
+PREFIX gx:     <https://w3id.org/gaia-x/development#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX ac3:    <https://ac3-project.eu/#>
+
+<https://piveau.ac3-project.eu/set/resource/service/115f7472-194d-446c-9518-efb9f55d3f73>
+    rdf:type                gx:ServiceOffering ;
+    dct:title               "Mapper Service" ;
+    schema:name             "edgemapper" ;
+    schema:description      "This is a mapper service for live IoT data." ;
+    ac3:image               "sparkworks/sw-mapper-ac3:0.5" ;
+    ac3:EnvironmentVariable "RABBITMQ_PORT=5672" ;
+    ac3:EnvironmentVariable "RABBITMQ_HOST=edgebroker" ;
+    ac3:EnvironmentVariable "RABBITMQ_USERNAME=mapperuc1" ;
+    ac3:EnvironmentVariable "RABBITMQ_PASSWORD=TmU5WmuikTQnDrWkRs7D" ;
+    ac3:EnvironmentVariable "QUEUE_OUT=mapperuc1.mapped" ;
+    ac3:EnvironmentVariable "QUEUE_IN=mapperuc1.data" ;
+    ac3:EnvironmentVariable "QUEUE_COMMANDS=mapperuc1.commands" ;
+    ac3:ExposedPort         "5026:5026" ;
+    ac3:ExposedPort         "8026:8026" .

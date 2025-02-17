@@ -1,0 +1,26 @@
+PREFIX piveau: <https://piveau.eu/ns/voc#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX shacl:  <http://www.w3.org/ns/shacl#>
+PREFIX skos:   <http://www.w3.org/2004/02/skos/core#>
+PREFIX dct:    <http://purl.org/dc/terms/>
+PREFIX dcat:   <http://www.w3.org/ns/dcat#>
+PREFIX schema: <https://schema.org/>
+PREFIX gx:     <https://w3id.org/gaia-x/development#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX ac3:    <https://ac3-project.eu/#>
+
+<>
+    rdf:type                gx:ServiceOffering ;
+    dct:title               "Streaming IoT Connector" ;
+    schema:name             "streaming-connector" ;
+    schema:description      "This is an edc connector for streaming iot data" ;
+    ac3:image               "sparkworks/ac3-connector-http-http-consumer:latest" ;
+    ac3:EnvironmentVariable "WEB_BASE_URL=http://192.168.1.215" ;
+    ac3:EnvironmentVariable "WEB_HTTP_PORT=28180" ;
+    ac3:EnvironmentVariable "WEB_HTTP_MANAGEMENT_PORT=28181" ;
+    ac3:EnvironmentVariable "WEB_HTTP_PROTOCOL_PORT=28182" ;
+    ac3:EnvironmentVariable "WEB_HTTP_CONTROL_PORT=28183" ;
+    ac3:ExposedPort         "28180:28180" ;
+    ac3:ExposedPort         "28181:28181" ;
+    ac3:ExposedPort         "28182:28182" ;
+    ac3:ExposedPort         "28183:28183" .

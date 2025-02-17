@@ -1,0 +1,25 @@
+PREFIX piveau: <https://piveau.eu/ns/voc#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX shacl:  <http://www.w3.org/ns/shacl#>
+PREFIX skos:   <http://www.w3.org/2004/02/skos/core#>
+PREFIX dct:    <http://purl.org/dc/terms/>
+PREFIX dcat:   <http://www.w3.org/ns/dcat#>
+PREFIX schema: <https://schema.org/>
+PREFIX gx:     <https://w3id.org/gaia-x/development#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX ac3:    <https://ac3-project.eu/#>
+
+<https://piveau.ac3-project.eu/set/resource/service/2046ca0a-c416-4ce8-b874-69a72afc8b1a>
+    rdf:type                gx:ServiceOffering ;
+    dct:title               "UC1 Application 1" ;
+    schema:name             "edgeapplication-1" ;
+    schema:description      "This is an application for UC1." ;
+    ac3:image               "sparkworks/data_manipulator_uc1:0.4" ;
+    ac3:EnvironmentVariable "RABBITMQ_PORT=5672" ;
+    ac3:EnvironmentVariable "RABBITMQ_HOST=edgebroker" ;
+    ac3:EnvironmentVariable "RABBITMQ_USERNAME=ml" ;
+    ac3:EnvironmentVariable "RABBITMQ_PASSWORD=7Iqk7uu1Ot" ;
+    ac3:EnvironmentVariable "QUEUE_OUT=mapperuc1.mapped" ;
+    ac3:EnvironmentVariable "QUEUE_OUT=mapperuc1.processed.ml" ;
+    ac3:EnvironmentVariable "QUEUE_IN=mapperuc1.mapped.ml" ;
+    ac3:ExposedPort         "5001:5001" .
