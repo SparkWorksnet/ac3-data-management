@@ -1,14 +1,15 @@
 version: '3'
 services:
   provider:
-    image: sparkworks/ac3-connector-http-http-provider:latest
+    #image: sparkworks/ac3-connector-http-http-provider:latest
+    image: ac3-connector-http-http-provider:latest
     ports:
       - "18180:18180"
       - "18181:18181"
       - "18182:18182"
       - "18183:18183"
     environment:
-      - WEB_BASE_URL=http://192.168.1.10
+      - WEB_BASE_URL=http://192.168.1.215
       - WEB_HTTP_PORT=18180
       - WEB_HTTP_MANAGEMENT_PORT=18181
       - WEB_HTTP_PROTOCOL_PORT=18182
