@@ -12,8 +12,11 @@ LOGGING_FORMAT = '%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(mess
 logger = logging.getLogger('main')
 logging.basicConfig(level=logging.INFO, format=LOGGING_FORMAT)
 
-gauges = {}
-
+gauges = Gauge(
+    f"current_value_label",
+    "docum",
+    ["device", "sensor"],
+)
 devices = []
 
 if __name__ == '__main__':
@@ -62,14 +65,9 @@ if __name__ == '__main__':
         value = parts[1]
         device = parts[0].split('/')[2]
         sensor = parts[0].split('/')[3]
-        if sensor not in gauges:
-            gauges[sensor] = Gauge(
-                f"current_{sensor}_label",
-                "docum",
-                ["device"],
-            )
+
         try:
-            gauges[sensor].labels(device).set(float(value))
+            gauges.labels(device, sensor).set(float(value))
             devices.append(device)
         except:
             pass

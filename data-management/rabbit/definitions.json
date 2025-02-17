@@ -52,7 +52,7 @@
   ],
   "exchanges": [
     {
-      "name": "test",
+      "name": "forwarder1",
       "vhost": "/",
       "type": "topic",
       "durable": true,
@@ -61,7 +61,25 @@
       "arguments": {}
     },
     {
-      "name": "forwarder1",
+      "name": "data",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "data-mapped",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "data-processed",
       "vhost": "/",
       "type": "topic",
       "durable": true,
@@ -106,7 +124,14 @@
       "arguments": {}
     },
     {
-      "name": "uc1-data",
+      "name": "data-mapped",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "data-processed",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
@@ -119,6 +144,14 @@
       "auto_delete": false,
       "arguments": {
         "x-message-ttl":5000
+      }
+    },
+    {
+      "name": "commands",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
       }
     },
     {
@@ -154,7 +187,15 @@
   ],
   "bindings": [
     {
-      "source": "test",
+      "source": "forwarder1",
+      "vhost": "/",
+      "destination": "data",
+      "destination_type": "exchange",
+      "routing_key": "#",
+      "arguments": {}
+    },
+    {
+      "source": "data",
       "vhost": "/",
       "destination": "data",
       "destination_type": "queue",
@@ -162,17 +203,17 @@
       "arguments": {}
     },
     {
-      "source": "forwarder1",
+      "source": "data-mapped",
       "vhost": "/",
-      "destination": "data",
+      "destination": "data-mapped",
       "destination_type": "queue",
       "routing_key": "#",
       "arguments": {}
     },
     {
-      "source": "forwarder1",
+      "source": "data-processed",
       "vhost": "/",
-      "destination": "uc1-data",
+      "destination": "data-processed",
       "destination_type": "queue",
       "routing_key": "#",
       "arguments": {}
